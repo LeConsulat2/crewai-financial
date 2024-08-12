@@ -26,7 +26,10 @@ os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 st.title("Financial Assistance Assessment")
 
 # File upload
-uploaded_file = st.file_uploader("Upload your bank statement PDF", type="pdf")
+uploaded_file = st.file_uploader(
+    "Upload your bank statement in PDF for a insightful analysis by the CrewAI Team!",
+    type="pdf",
+)
 
 if uploaded_file is not None:
     # Save the uploaded file temporarily
