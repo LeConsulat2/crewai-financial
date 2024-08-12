@@ -4,6 +4,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from crewai import Crew, Agent, Task
 import pdfplumber
+import re
 
 # Load environment variables
 load_dotenv()
@@ -18,12 +19,11 @@ if not openai_api_key:
     st.error(
         "OpenAI API key is missing. Please set the OPENAI_API_KEY environment variable or add it to the Streamlit secrets."
     )
-    st.stop()  # Stop the Streamlit script here if the key is missing
+    st.stop()
 
 os.environ["OPENAI_API_KEY"] = openai_api_key
 os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 st.title("Financial Assistance Assessment")
-
 
 # File upload
 uploaded_file = st.file_uploader("Upload your bank statement PDF", type="pdf")
@@ -42,25 +42,47 @@ if uploaded_file is not None:
     data = {"Income": [], "Expenses": [], "Documentation": []}
     lines = text.split("\n")
 
+    # Regular expression to detect amounts
+    amount_regex = re.compile(r"\$?\d+[\.,]?\d*")
+
     for line in lines:
-        if "TRANSFER" in line or "PAY" in line or "DIRECT" in line or "POS" in line:
-            parts = line.split(" ")
-            date = parts[0] + " " + parts[1]
-            description = " ".join(parts[2:-2])
-            if len(parts) >= 4:
-                try:
-                    withdrawal_amount = float(
-                        parts[-1].replace(",", "").replace("$", "")
-                    )
-                    deposit_amount = float(parts[-2].replace(",", "").replace("$", ""))
-                except ValueError:
-                    deposit_amount = 0
-                    withdrawal_amount = float(
-                        parts[-1].replace(",", "").replace("$", "")
-                    )
-            else:
-                deposit_amount = 0
-                withdrawal_amount = 0
+        # Check if the line contains any transaction keywords
+        if any(
+            keyword in line.lower()
+            for keyword in [
+                "transfer",
+                "pay",
+                "direct",
+                "pos",
+                "visa",
+                "eftpos",
+                "bill",
+                "credit",
+                "debit",
+                "automatic",
+            ]
+        ):
+            parts = line.split()
+            description = " ".join(parts[:-2])  # Tentative description
+            amounts = [
+                float(amount.replace(",", "").replace("$", ""))
+                for amount in parts
+                if amount_regex.match(amount)
+            ]
+
+            # Default amounts
+            deposit_amount = 0
+            withdrawal_amount = 0
+
+            if len(amounts) == 2:
+                withdrawal_amount, deposit_amount = (
+                    amounts if amounts[0] > amounts[1] else amounts[::-1]
+                )
+            elif len(amounts) == 1:
+                if "-" in parts[-1]:  # Withdrawal indicated by a minus sign
+                    withdrawal_amount = amounts[0]
+                else:
+                    deposit_amount = amounts[0]
 
             if deposit_amount > 0:
                 data["Income"].append(
@@ -91,9 +113,8 @@ if uploaded_file is not None:
     def assess_financial_needs(shortfall, documentation):
         if shortfall <= 500:
             return "Approve: $500"
-        elif shortfall > 500:
-            recommendation = f"Recommend approval of ${shortfall} due to significant shortfall in income during placement period. Documentation provided: {documentation}"
-            return recommendation
+        else:
+            return f"Recommend approval of ${shortfall} due to significant shortfall in income during placement period. Documentation provided: {documentation}"
 
     assessment = assess_financial_needs(shortfall, data["Documentation"])
 
