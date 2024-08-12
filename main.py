@@ -43,8 +43,8 @@ if uploaded_file is not None:
     data = {"Income": [], "Expenses": [], "Documentation": []}
     lines = text.split("\n")
 
-    # Regular expression to detect amounts
-    amount_regex = re.compile(r"\$?\d{1,3}(?:,\d{3})*(?:\.\d{2})?")
+    # Regular expression to detect valid currency amounts (improving to avoid account numbers)
+    amount_regex = re.compile(r"^\$?\d{1,3}(?:,\d{3})*(?:\.\d{2})?$")
 
     for line in lines:
         # Check if the line contains any transaction keywords
@@ -67,6 +67,8 @@ if uploaded_file is not None:
             description = " ".join(
                 [part for part in parts if not amount_regex.match(part)]
             )  # Get description
+
+            # Extract valid amounts using the improved regex
             amounts = [
                 float(amount.replace(",", "").replace("$", ""))
                 for amount in parts
@@ -78,11 +80,7 @@ if uploaded_file is not None:
             withdrawal_amount = 0
 
             if len(amounts) == 2:
-                if "deposit" in line.lower() or "credit" in line.lower():
-                    deposit_amount = amounts[1]
-                    withdrawal_amount = amounts[0]
-                else:
-                    withdrawal_amount, deposit_amount = sorted(amounts)
+                withdrawal_amount, deposit_amount = sorted(amounts)
             elif len(amounts) == 1:
                 if (
                     "withdraw" in line.lower()
