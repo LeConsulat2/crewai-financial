@@ -8,6 +8,10 @@ import pdfplumber
 # Load environment variables
 load_dotenv()
 
+openai_api_key = (
+    os.getenv("OPENAI_API_KEY") or st.secrets["credentials"]["OPENAI_API_KEY"]
+)
+
 os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 
 st.title("Financial Assistance Assessment")
