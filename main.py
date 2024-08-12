@@ -90,8 +90,9 @@ if uploaded_file is not None:
     def assess_financial_needs(shortfall, documentation):
         if shortfall <= 500:
             return "Approve: $500"
-        else:
-            return f"Recommend approval of ${shortfall} due to significant shortfall in income during placement period. Documentation provided: {documentation}"
+        elif shortfall > 500:
+            recommendation = f"Recommend approval of ${shortfall} due to significant shortfall in income during placement period. Documentation provided: {documentation}"
+            return recommendation
 
     assessment = assess_financial_needs(shortfall, data["Documentation"])
 
@@ -125,17 +126,19 @@ if uploaded_file is not None:
         description="Assess the financial needs of each student based on their application, documentation, and financial situation. Make a decision to approve, decline, or recommend a specific amount of assistance.",
         agent=senior_advisor_agent,
         expected_output="""
-        Your output should include a detailed assessment of the student's financial situation, the decision (approve/decline/recommend), and the exact amount to give out if approved or recommended. If the recommended amount exceeds $500, clearly state the recommended amount and provide a clear rationale for why that specific amount is necessary, considering the student's financial hardship, educational costs, and other relevant circumstances. Provide a summary that includes the recommended amount for approval.
+        Your output should include a detailed assessment of the student's financial situation, the decision (approve/decline/recommend), the exact amount to give out if approved or recommended, and a rationale that justifies your decision. If the amount exceeds $500, the exact amount (e.g., $1300) should be clearly stated along with a full rationale explaining why that amount is recommended to the manager. The rationale should include considerations such as the student's financial hardship, educational costs, employment status, and any extenuating circumstances.
+        Remember, you must state the amount to be recommended not just recommend more than $500, MUST explicitly state how much exactly to be recommended.
         """,
         output_file="financial_assessment.md",
     )
 
     # Define the final decision and documentation task
     final_decision_task = Task(
-        description="Document the final decision on the financial assistance request, including the rationale. Prepare the case for review by a manager if the recommended amount exceeds your approval limit of $500.",
+        description="Document the final decision on the financial assistance request, including the rationale. Prepare the case for review by a manager if the recommended amount exceeds your approval limit.",
         agent=senior_advisor_agent,
         expected_output="""
-        Your output should include a clear and concise documentation of the decision made, the exact amount approved or recommended, and the rationale. If the recommended amount exceeds $500, clearly state the recommended amount ie - amount to recommend $750 and provide a summary and rationale for why this amount is necessary, ensuring that all aspects of the student's financial needs and circumstances are considered.
+        Your output should include a clear and concise documentation of the decision made, the exact amount approved or recommended, and the rationale. If the recommended amount exceeds $500, the exact amount (e.g., $1300) should be clearly stated, along with a detailed rationale for why this amount is necessary and justified. This should include a consideration of the student's financial needs, the impact on their education, and any relevant circumstances.
+        Remember, you must state the amount to be recommended not just recommend more than $500, MUST explicitly state how much exactly to be recommended.
         """,
         output_file="final_decision.md",
     )
