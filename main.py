@@ -35,15 +35,16 @@ if uploaded_file is not None:
 
     # Extract data from PDF
     with pdfplumber.open("uploaded_statement.pdf") as pdf:
-        page = pdf.pages[0]
-        text = page.extract_text()
+        text = ""
+        for page in pdf.pages:
+            text += page.extract_text() + "\n"
 
     # Process the extracted text
     data = {"Income": [], "Expenses": [], "Documentation": []}
     lines = text.split("\n")
 
     # Regular expression to detect amounts
-    amount_regex = re.compile(r"\$?\d+[\.,]?\d*")
+    amount_regex = re.compile(r"\$?\d{1,3}(?:,\d{3})*(?:\.\d{2})?")
 
     for line in lines:
         # Check if the line contains any transaction keywords
@@ -63,7 +64,9 @@ if uploaded_file is not None:
             ]
         ):
             parts = line.split()
-            description = " ".join(parts[:-2])  # Tentative description
+            description = " ".join(
+                [part for part in parts if not amount_regex.match(part)]
+            )  # Get description
             amounts = [
                 float(amount.replace(",", "").replace("$", ""))
                 for amount in parts
@@ -75,11 +78,17 @@ if uploaded_file is not None:
             withdrawal_amount = 0
 
             if len(amounts) == 2:
-                withdrawal_amount, deposit_amount = (
-                    amounts if amounts[0] > amounts[1] else amounts[::-1]
-                )
+                if "deposit" in line.lower() or "credit" in line.lower():
+                    deposit_amount = amounts[1]
+                    withdrawal_amount = amounts[0]
+                else:
+                    withdrawal_amount, deposit_amount = sorted(amounts)
             elif len(amounts) == 1:
-                if "-" in parts[-1]:  # Withdrawal indicated by a minus sign
+                if (
+                    "withdraw" in line.lower()
+                    or "debit" in line.lower()
+                    or "-" in parts
+                ):
                     withdrawal_amount = amounts[0]
                 else:
                     deposit_amount = amounts[0]
@@ -105,8 +114,8 @@ if uploaded_file is not None:
     st.write(expenses_df)
 
     # Calculate totals and shortfall
-    total_income = income_df["amount"].sum()
-    total_expenses = expenses_df["amount"].sum()
+    total_income = income_df["amount"].sum() if "amount" in income_df else 0
+    total_expenses = expenses_df["amount"].sum() if "amount" in expenses_df else 0
     shortfall = total_expenses - total_income
 
     # Assessment logic based on AUT guidelines
@@ -149,7 +158,6 @@ if uploaded_file is not None:
         agent=senior_advisor_agent,
         expected_output="""
         Your output should include a detailed assessment of the student's financial situation, the decision (approve/decline/recommend), the exact amount to give out if approved or recommended, and a rationale that justifies your decision. If the amount exceeds $500, the exact amount (e.g., $1300) should be clearly stated along with a full rationale explaining why that amount is recommended to the manager. The rationale should include considerations such as the student's financial hardship, educational costs, employment status, and any extenuating circumstances.
-       
         """,
         output_file="financial_assessment.md",
     )
@@ -160,20 +168,14 @@ if uploaded_file is not None:
         agent=senior_advisor_agent,
         expected_output="""
         Your output should include a clear and concise documentation of the decision made, the exact amount approved or recommended, and the rationale. If the recommended amount exceeds $500, the exact amount (e.g., $1300) should be clearly stated, along with a detailed rationale for why this amount is necessary and justified. This should include a consideration of the student's financial needs, the impact on their education, and any relevant circumstances.
-        Remember, you must state the amount to be recommended not just recommend more than $500, MUST explicitly state how much exactly to be recommended.
         """,
         output_file="final_decision.md",
     )
 
     # Create the crew instance
     crew = Crew(
-        tasks=[
-            financial_assessment_task,
-            final_decision_task,
-        ],
-        agents=[
-            senior_advisor_agent,
-        ],
+        tasks=[financial_assessment_task, final_decision_task],
+        agents=[senior_advisor_agent],
         verbose=2,
     )
 
