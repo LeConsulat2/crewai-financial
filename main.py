@@ -126,7 +126,7 @@ if uploaded_file is not None:
         description="Assess the financial needs of each student based on their application, documentation, and financial situation. Make a decision to approve, decline, or recommend a specific amount of assistance.",
         agent=senior_advisor_agent,
         expected_output="""
-        Your output should include a detailed assessment of the student's financial situation, the decision (approve/decline/recommend), the exact amount to give out if approved or recommended, and a rationale that justifies your decision. The rationale should be comprehensive enough that any manager would agree with your assessment.
+        Your output should include a detailed assessment of the student's financial situation, the decision (approve/decline/recommend), the exact amount to give out if approved or recommended, and a rationale that justifies your decision. The amount should be clearly stated in the format: 'Approved Amount: $X' or 'Recommended Amount: $X'. The rationale should be comprehensive enough that any manager would agree with your assessment.
         """,
         output_file="financial_assessment.md",
     )
@@ -136,7 +136,7 @@ if uploaded_file is not None:
         description="Document the final decision on the financial assistance request, including the rationale. Prepare the case for review by a manager if the recommended amount exceeds your approval limit.",
         agent=senior_advisor_agent,
         expected_output="""
-        Your output should include a clear and concise documentation of the decision made, the amount approved or recommended, and the rationale. If the amount recommended exceeds $500, include a note that the case requires managerial review.
+        Your output should include a clear and concise documentation of the decision made, the exact amount approved or recommended, and the rationale. The amount should be clearly stated in the format: 'Approved Amount: $X' or 'Recommended Amount: $X'. If the amount recommended exceeds $500, include a note that the case requires managerial review.
         """,
         output_file="final_decision.md",
     )
