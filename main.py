@@ -24,47 +24,6 @@ os.environ["OPENAI_API_KEY"] = openai_api_key
 os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 st.title("Financial Assistance Assessment")
 
-# Add custom CSS for gradient styles
-st.markdown(
-    """
-    <style>
-    /* Gradient style for buttons */
-    .stButton>button {
-        background: linear-gradient(135deg, #1f77b4, #0E1117);
-        border: 1px solid #1f77b4;
-        border-radius: 8px;
-        padding: 10px 20px;
-        font-weight: bold;
-        color: #ffffff;
-        transition: background 0.3s ease, border-color 0.3s ease;
-    }
-
-    .stButton>button:hover {
-        background: linear-gradient(135deg, #0E1117, #1f77b4);
-        border-color: #ffffff;
-    }
-
-    /* Gradient style for header */
-    .stMarkdown h1 {
-        background: -webkit-linear-gradient(135deg, #ffffff, #1f77b4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 2.5em;
-        font-weight: bold;
-        text-align: center;
-    }
-
-    /* Gradient style for dividers */
-    .stDivider {
-        border-color: transparent;
-        background: linear-gradient(90deg, #1f77b4, #0E1117);
-        height: 2px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
 
 # File upload
 uploaded_file = st.file_uploader("Upload your bank statement PDF", type="pdf")
