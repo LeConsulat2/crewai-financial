@@ -8,12 +8,20 @@ import pdfplumber
 # Load environment variables
 load_dotenv()
 
-openai_api_key = (
-    os.getenv("OPENAI_API_KEY") or st.secrets["credentials"]["OPENAI_API_KEY"]
+# Try to get the API key from environment variables or Streamlit secrets
+openai_api_key = os.getenv("OPENAI_API_KEY") or st.secrets["credentials"].get(
+    "OPENAI_API_KEY"
 )
 
-os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
+# Raise an error if the API key is not found
+if not openai_api_key:
+    st.error(
+        "OpenAI API key is missing. Please set the OPENAI_API_KEY environment variable or add it to the Streamlit secrets."
+    )
+    st.stop()  # Stop the Streamlit script here if the key is missing
 
+os.environ["OPENAI_API_KEY"] = openai_api_key
+os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 st.title("Financial Assistance Assessment")
 
 # File upload
