@@ -86,7 +86,6 @@ if uploaded_file is not None:
 
     # Create a DataFrame for the final assessment
     assessment_data = {
-        "Student ID": [data["Student ID"]],
         "Total Income": [total_income],
         "Total Expenses": [total_expenses],
         "Shortfall": [shortfall],
