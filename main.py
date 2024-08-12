@@ -127,7 +127,7 @@ if uploaded_file is not None:
         agent=senior_advisor_agent,
         expected_output="""
         Your output should include a detailed assessment of the student's financial situation, the decision (approve/decline/recommend), the exact amount to give out if approved or recommended, and a rationale that justifies your decision. If the amount exceeds $500, the exact amount (e.g., $1300) should be clearly stated along with a full rationale explaining why that amount is recommended to the manager. The rationale should include considerations such as the student's financial hardship, educational costs, employment status, and any extenuating circumstances.
-        Remember, you must state the amount to be recommended not just recommend more than $500, MUST explicitly state how much exactly to be recommended.
+       
         """,
         output_file="financial_assessment.md",
     )
