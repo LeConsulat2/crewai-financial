@@ -23,7 +23,7 @@ if not openai_api_key:
 
 os.environ["OPENAI_API_KEY"] = openai_api_key
 os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
-st.title("Financial Assistance Assessment")
+st.title("Financial Assistance Assessment (Beta)")
 
 # File upload
 uploaded_file = st.file_uploader(
