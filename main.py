@@ -132,10 +132,10 @@ if uploaded_file is not None:
 
     # Define the final decision and documentation task
     final_decision_task = Task(
-        description="Document the final decision on the financial assistance request, including the rationale. Prepare the case for review by a manager if the recommended amount exceeds your approval limit.",
+        description="Document the final decision on the financial assistance request, including the rationale. Prepare the case for review by a manager if the recommended amount exceeds your approval limit of $500.",
         agent=senior_advisor_agent,
         expected_output="""
-        Your output should include a clear and concise documentation of the decision made, the exact amount approved or recommended, and the rationale. If the recommended amount exceeds $500, clearly state the recommended amount and provide a summary and rationale for why this amount is necessary, ensuring that all aspects of the student's financial needs and circumstances are considered.
+        Your output should include a clear and concise documentation of the decision made, the exact amount approved or recommended, and the rationale. If the recommended amount exceeds $500, clearly state the recommended amount ie - amount to recommend $750 and provide a summary and rationale for why this amount is necessary, ensuring that all aspects of the student's financial needs and circumstances are considered.
         """,
         output_file="final_decision.md",
     )
