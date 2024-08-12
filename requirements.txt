@@ -1,0 +1,5 @@
+streamlit==1.22.0
+pandas==2.0.3
+python-dotenv==1.0.0
+crewai==0.1.0
+pdfplumber==0.8.0
