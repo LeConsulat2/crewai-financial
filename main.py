@@ -153,12 +153,8 @@ if uploaded_file is not None:
         verbose=2,
     )
 
-    # Kickoff the crew with inputs from the financial assessments
-    result = crew.kickoff(
-        inputs=dict(
-            requests=assessment_df.to_dict("records"),
-        )
-    )
+    # Kickoff the crew without using 'inputs' argument
+    result = crew.kickoff()
 
     # Display the result
     st.subheader("CrewAI Assessment Result")
