@@ -126,7 +126,7 @@ if uploaded_file is not None:
         description="Assess the financial needs of each student based on their application, documentation, and financial situation. Make a decision to approve, decline, or recommend a specific amount of assistance.",
         agent=senior_advisor_agent,
         expected_output="""
-        Your output should include a detailed assessment of the student's financial situation, the decision (approve/decline/recommend), the exact amount to give out if approved or recommended, and a rationale that justifies your decision. If the amount exceeds $500, the exact amount (e.g., $1300) should be clearly stated along with a full rationale explaining why that amount is recommended to the manager. The rationale should include considerations such as the student's financial hardship, educational costs, employment status, and any extenuating circumstances.
+        Your output should include a detailed assessment of the student's financial situation, the decision (approve/decline/recommend), and the exact amount to give out if approved or recommended. If the recommended amount exceeds $500, you must clearly state the exact amount to be requested for managerial approval (e.g., 'Request Managerial Approval for $1300'). The rationale should justify why that specific amount is necessary and how it was calculated, considering factors such as the student's financial hardship, educational costs, and other relevant circumstances.
         """,
         output_file="financial_assessment.md",
     )
@@ -136,7 +136,7 @@ if uploaded_file is not None:
         description="Document the final decision on the financial assistance request, including the rationale. Prepare the case for review by a manager if the recommended amount exceeds your approval limit.",
         agent=senior_advisor_agent,
         expected_output="""
-        Your output should include a clear and concise documentation of the decision made, the exact amount approved or recommended, and the rationale. If the recommended amount exceeds $500, the exact amount (e.g., $1300) should be clearly stated, along with a detailed rationale for why this amount is necessary and justified. This should include a consideration of the student's financial needs, the impact on their education, and any relevant circumstances.
+        Your output should include a clear and concise documentation of the decision made, the exact amount approved or recommended, and the rationale. If the recommended amount exceeds $500, state the specific amount to be requested for approval (e.g., 'Request Managerial Approval for $1300'). The rationale should thoroughly explain why this amount is necessary, ensuring that all aspects of the student's financial needs and circumstances are considered.
         """,
         output_file="final_decision.md",
     )
