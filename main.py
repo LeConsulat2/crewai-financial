@@ -180,9 +180,12 @@ if uploaded_file is not None:
         verbose=2,
     )
 
-    # Kickoff the crew without using 'inputs' argument
-    result = crew.kickoff()
+    # Display spinner and run CrewAI
+    with st.spinner(
+        "Analysis in progress... Outcome and recommendation are being made. Please wait."
+    ):
+        result = crew.kickoff()
 
-    # Display the result
+    # Display the result after the spinner is done
     st.subheader("CrewAI Assessment Result")
     st.write(result)
