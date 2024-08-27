@@ -80,7 +80,7 @@ class RecommendAgent(Agent):
 
 
 # Initialize Crew and add agents
-crew = Crew(
+agent = Agent(
     agents=[
         IncomeAgent(name="Income Agent"),
         ExpenseAgent(name="Expense Agent"),
@@ -105,8 +105,8 @@ if uploaded_file:
     ]
 
     # Perform tasks for Income and Expense Agents
-    income_task = crew.perform_task(tasks[0])
-    expense_task = crew.perform_task(tasks[1])
+    income_task = agent.perform_task(tasks[0])
+    expense_task = agent.perform_task(tasks[1])
 
     income_info = income_task.result
     expense_info = expense_task.result
@@ -121,13 +121,13 @@ if uploaded_file:
         },
         agent="Story Agent",
     )
-    story_info = crew.perform_task(story_task).result
+    story_info = agent.perform_task(story_task).result
 
     # Define task for Recommend Agent
     recommend_task = Task(
         name="Recommend Assistance", input_data=story_info, agent="Recommend Agent"
     )
-    recommendation = crew.perform_task(recommend_task).result
+    recommendation = agent.perform_task(recommend_task).result
 
     # Display the assessment results
     st.header("Assessment Report")
