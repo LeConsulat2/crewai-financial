@@ -1,7 +1,7 @@
 import streamlit as st
 import openai
 from PyPDF2 import PdfReader
-from crewai import CrewAI
+from crewai import Crew, Agent, Task
 from dotenv import load_dotenv
 import os
 from langchain.chat_models import ChatOpenAI
@@ -38,34 +38,34 @@ def extract_pdf_text(pdf_file):
 
 # Initialize CrewAI with agents using ChatOpenAI
 crew_ai = CrewAI(api_key=openai_api_key)
-chat_model = ChatOpenAI(temperature=0.7, model="gpt-3.5-turbo")
+chat_model = ChatOpenAI(temperature=0.3, model="gpt-4o-mini")
 
 
 # Define Income Agent
 def income_agent(pdf_text):
     prompt = f"Calculate the total weekly income for the student. Convert any fortnightly income by dividing by 2 and any monthly income by dividing by 4.\n\n{pdf_text}"
-    response = chat_model(completion(prompt))
+    response = chat_model(messages=[{"role": "user", "content": prompt}])
     return response["choices"][0]["message"]["content"].strip()
 
 
 # Define Expense Agent
 def expense_agent(pdf_text):
     prompt = f"Calculate the total weekly expenses for the student. Convert any fortnightly expenses by dividing by 2 and any monthly expenses by dividing by 4.\n\n{pdf_text}"
-    response = chat_model(completion(prompt))
+    response = chat_model(messages=[{"role": "user", "content": prompt}])
     return response["choices"][0]["message"]["content"].strip()
 
 
 # Define Story Agent
 def story_agent(pdf_text, income_info, expense_info):
     prompt = f"Using the following student's story and financial situation, assess their financial situation. Consider any shortfall or surplus of the income, and mention factors such as placements, job loss, or rent arrears.\n\nStory:\n{pdf_text}\n\nWeekly Income:\n{income_info}\n\nWeekly Expenses:\n{expense_info}"
-    response = chat_model(completion(prompt))
+    response = chat_model(messages=[{"role": "user", "content": prompt}])
     return response["choices"][0]["message"]["content"].strip()
 
 
 # Define Recommend Agent
 def recommend_agent(story_info):
     prompt = f"Based on the following financial situation and story, provide a final recommendation on how much financial assistance the student should receive. Provide an exact dollar value and logically assess if the assistance should be granted or declined.\n\n{story_info}"
-    response = chat_model(completion(prompt))
+    response = chat_model(messages=[{"role": "user", "content": prompt}])
     return response["choices"][0]["message"]["content"].strip()
 
 
