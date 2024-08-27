@@ -36,8 +36,8 @@ def extract_pdf_text(pdf_file):
     return text
 
 
-# Initialize CrewAI with agents using ChatOpenAI
-crew_ai = Crew(api_key=openai_api_key)
+# Initialize ChatOpenAI Model
+
 chat_model = ChatOpenAI(temperature=0.3, model="gpt-4o-mini")
 
 
