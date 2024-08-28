@@ -4,6 +4,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 import os
 from dotenv import load_dotenv
+from PyPDF2 import PdfReader
 
 # Load environment variables
 load_dotenv()
@@ -19,15 +20,21 @@ if not openai_api_key:
     st.stop()
 
 os.environ["OPENAI_API_KEY"] = openai_api_key
-os.environ["OPENAI_MODEL_NAME"] = "gpt-4-turbo-preview"
+os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 
 st.title("Advanced Financial Assistance Assessment (CrewAI)")
 
 
+# Function to extract text from PDF
+def extract_pdf_text(pdf_file):
+    reader = PdfReader(pdf_file)
+    return " ".join(page.extract_text() for page in reader.pages)
+
+
 # Define the agents and tasks declaratively
-def define_agents_and_tasks():
+def define_agents_and_tasks(pdf_text):
     # Initialize ChatOpenAI model
-    chat_model = ChatOpenAI(temperature=0.3, model="gpt-4-turbo-preview")
+    chat_model = ChatOpenAI(temperature=0.3, model="gpt-4o-mini")
 
     # Define IncomeAgent
     income_agent = Agent(
@@ -122,22 +129,31 @@ def define_agents_and_tasks():
     ]
 
 
-# Initialize the agents and tasks
-agents, tasks = define_agents_and_tasks()
-
-# Create the crew instance
-crew = Crew(
-    tasks=tasks,
-    agents=agents,
-    verbose=2,
+# Streamlit file upload
+uploaded_file = st.file_uploader(
+    "Upload the Financial Assistance Form Submission PDF", type="pdf"
 )
 
-# Display spinner and run CrewAI
-with st.spinner(
-    "Analysis in progress... Outcome and recommendation are being made. Please wait."
-):
-    result = crew.kickoff()
+if uploaded_file:
+    # Extract text from uploaded PDF
+    pdf_text = extract_pdf_text(uploaded_file)
 
-# Display the result after the spinner is done
-st.subheader("CrewAI Assessment Result")
-st.write(result)
+    # Initialize the agents and tasks with the extracted text
+    agents, tasks = define_agents_and_tasks(pdf_text)
+
+    # Create the crew instance
+    crew = Crew(
+        tasks=tasks,
+        agents=agents,
+        verbose=2,
+    )
+
+    # Display spinner and run CrewAI
+    with st.spinner(
+        "Analysis in progress... Outcome and recommendation are being made. Please wait."
+    ):
+        result = crew.kickoff()
+
+    # Display the result after the spinner is done
+    st.subheader("CrewAI Assessment Result")
+    st.write(result)
