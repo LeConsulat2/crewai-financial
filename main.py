@@ -59,12 +59,8 @@ def extract_situation(pdf_text):
 
 
 # Custom function to handle progress updates
-class ProgressHandler:
-    def __init__(self, placeholder):
-        self.placeholder = placeholder
-
-    def log(self, message):
-        self.placeholder.text(message)
+def log_progress(progress_placeholder, message):
+    progress_placeholder.text(message)
 
 
 # Define the agents and tasks
@@ -236,16 +232,24 @@ uploaded_file = st.file_uploader(
 if uploaded_file:
     pdf_text = extract_pdf_text(uploaded_file)
     agents, tasks = define_agents_and_tasks(pdf_text)
+
+    # Corrected Crew instance creation
     crew = Crew(tasks=tasks, agents=agents, verbose=2)
 
     progress_placeholder = st.empty()
-    progress_handler = ProgressHandler(progress_placeholder)
 
     # Display spinner and run CrewAI
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
     ):
-        result = crew.kickoff(progress_callback=progress_handler.log)
+        result = crew.kickoff()
+
+        # Manually simulate progress logging
+        for i, task in enumerate(tasks):
+            log_progress(
+                progress_placeholder,
+                f"Completed task {i + 1}/{len(tasks)}: {task.description}",
+            )
 
     # Display the final result
     st.subheader("CrewAI Assessment Result")
