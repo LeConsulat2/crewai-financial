@@ -4,7 +4,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 import os
 from dotenv import load_dotenv
-from PyPDF2 import PdfReader
+import pdfplumber
+import re
 
 # Load environment variables
 load_dotenv()
@@ -22,68 +23,52 @@ if not openai_api_key:
 os.environ["OPENAI_API_KEY"] = openai_api_key
 os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 
-st.title("Advanced Financial Assistance Assessment (CrewAI)")
+st.title("Financial Hardship Assessment (CrewAI)")
 
 
-# Function to extract text from PDF
+# Function to extract text from PDF using pdfplumber
 def extract_pdf_text(pdf_file):
-    reader = PdfReader(pdf_file)
-    extracted_text = " ".join(page.extract_text() for page in reader.pages)
+    with pdfplumber.open(pdf_file) as pdf:
+        extracted_text = " ".join(
+            page.extract_text() for page in pdf.pages if page.extract_text()
+        )
     return extracted_text
 
 
-# Function to extract specific sections for StoryAgent
-def extract_story_info(pdf_text):
-    support_type = extract_support_type(pdf_text)
-    situation = extract_situation(pdf_text)
-    return support_type, situation
-
-
-# Example extraction functions
+# Improved extraction functions using refined regular expressions
 def extract_support_type(pdf_text):
-    # Logic to find and return the "type(s) of financial support" section
-    start = pdf_text.find(
-        "Please select the type(s) of financial support you are requesting"
+    # Refined regex pattern to handle line breaks and spaces
+    match = re.search(
+        r"Please\s*select\s*the\s*type\(s\)\s*of\s*financial\s*support\s*you\s*are\s*requesting\s*([\s\S]*?)\s*Please\s*tell\s*us\s*briefly\s*about\s*your\s*situation\s*and\s*why\s*you\s*are\s*seeking\s*financial\s*support",
+        pdf_text,
+        re.IGNORECASE,
     )
-    end = pdf_text.find(
-        "Please tell us briefly about your situation and why you are seeking financial support"
-    )
-    if start != -1 and end != -1:
-        return (
-            pdf_text[start:end]
-            .replace(
-                "Please select the type(s) of financial support you are requesting", ""
-            )
-            .strip()
-        )
+    if match:
+        return match.group(1).strip()
     return "Unknown"
 
 
 def extract_situation(pdf_text):
-    # Logic to find and return the "situation and why seeking financial support" section
-    start = pdf_text.find(
-        "Please tell us briefly about your situation and why you are seeking financial support"
+    # Refined regex pattern to handle line breaks and spaces
+    match = re.search(
+        r"Please\s*tell\s*us\s*briefly\s*about\s*your\s*situation\s*and\s*why\s*you\s*are\s*seeking\s*financial\s*support\s*([\s\S]*?)\s*What\s*is\s*your\s*income\?",
+        pdf_text,
+        re.IGNORECASE,
     )
-    end = pdf_text.find("What is your income?")
-    if start != -1 and end != -1:
-        return (
-            pdf_text[start:end]
-            .replace(
-                "Please tell us briefly about your situation and why you are seeking financial support",
-                "",
-            )
-            .strip()
-        )
+    if match:
+        return match.group(1).strip()
     return "Unknown"
 
 
 # Define the agents and tasks
 def define_agents_and_tasks(pdf_text):
     # Extract specific information for the StoryAgent
-    support_type, situation = extract_story_info(pdf_text)
+    support_type, situation = extract_support_type(pdf_text), extract_situation(
+        pdf_text
+    )
 
     # Initialize ChatOpenAI model
-    chat_model = ChatOpenAI(temperature=0.3, model="gpt-4o-mini")
+    chat_model = ChatOpenAI(temperature=0.5, model="gpt-4o-mini")
 
     # Define IncomeAgent
     income_agent = Agent(
@@ -95,7 +80,7 @@ def define_agents_and_tasks(pdf_text):
         """,
         prompt_template=PromptTemplate(
             template="""
-            Calculate the total weekly income for the student. Convert any fortnightly income by dividing by 2 and any monthly income by dividing by 4.
+            Calculate the total weekly income for the student. Convert any fortnightly income by dividing by 2 and any monthly income by dividing by 4 and once all converted to weekly, add all the weekly incomes which will show the average weekly income.
 
             Student's financial information:
             {pdf_text}
@@ -113,8 +98,8 @@ def define_agents_and_tasks(pdf_text):
         role="Expense Agent",
         goal="Calculate the total weekly expenses from the student's financial information.",
         backstory="""
-        You are responsible for calculating the student's weekly expenses, ensuring all costs are accounted for, including those that may occur less frequently (monthly or fortnightly).
-        Your calculations will be crucial for determining the student's financial need.
+        You are responsible for calculating the student's weekly expenses, ensuring all costs are accounted for, including fortnightly and monthly. Once converted into weekly, add all weekly expenses that will show the average weekly expenses.
+        Your calculations will be crucial for assessing and determining the student's financial need.
         """,
         prompt_template=PromptTemplate(
             template="""
@@ -137,11 +122,11 @@ def define_agents_and_tasks(pdf_text):
         goal="Analyze the student's financial situation based on their story and financial data.",
         backstory="""
         Your role is to analyze the student's overall financial situation by synthesizing their narrative with the calculated income and expenses.
-        Your analysis should highlight any financial challenges, gaps, or noteworthy circumstances that might affect the student's ability to support themselves.
+        Your analysis should highlight any financial challenges, gaps, or noteworthy circumstances.
         """,
         prompt_template=PromptTemplate(
             template="""
-            Analyze the student's financial situation based on their story and financial data. Identify any income shortfall or surplus, and highlight factors such as job loss, placements, or other significant financial challenges.
+            Analyze the student's financial situation based on their story and financial data. Identify any overall shortfall or surplus (weekly income - weekly expense), and highlight factors such as job loss, placements, or other significant financial challenges.
 
             Type(s) of Financial Support Requested: {support_type}
 
@@ -170,15 +155,10 @@ def define_agents_and_tasks(pdf_text):
         goal="Provide a final recommendation on financial assistance, including amount and justification.",
         backstory="""
         Your task is to review the student's financial situation analysis and make a final recommendation on the amount of financial assistance that should be provided.
-        Your recommendation must be well-justified, clearly stating the amount and the rationale, ensuring that it aligns with both the student's needs and the assistance guidelines.
         """,
         prompt_template=PromptTemplate(
             template="""
             Based on the following financial situation and story, provide a final recommendation on how much financial assistance the student should receive.
-            Provide an exact dollar value and logically assess if the assistance should be granted or declined.
-
-            Financial Situation Analysis:
-            {story_info}
             """,
             input_variables=["story_info"],
         ),
@@ -190,23 +170,54 @@ def define_agents_and_tasks(pdf_text):
 
     # Define tasks
     financial_assessment_task = Task(
-        description="Assess the financial needs of each student based on their application, documentation, and financial situation. Make a decision to approve, decline, or recommend a specific amount of assistance.",
-        agent=income_agent,  # First step in assessment
+        description="Assess the financial needs of each student based on their application, documentation, and financial situation.",
+        agent=income_agent,
+        expected_output="""
+    A detailed report containing:
+    - A breakdown of all income sources, including type, amount, and frequency (weekly, fortnightly, monthly).
+    - Conversion of all non-weekly income amounts to a weekly basis with clear calculations.
+    - Total calculated weekly income amount in a clear and concise format.
+    - Identification of any irregularities or special considerations affecting income calculations (e.g., one-off payments or variable income).
+    - Additional notes or assumptions made during calculations.
+    """,
     )
 
     expense_assessment_task = Task(
         description="Assess the student's weekly expenses based on their provided financial information.",
-        agent=expense_agent,  # Second step in assessment
+        agent=expense_agent,
+        expected_output="""
+    A comprehensive breakdown of the student's weekly expenses, including:
+    - Itemized list of all regular expenses with type, amount, and frequency (weekly, fortnightly, monthly).
+    - Conversion of all non-weekly expenses to a weekly basis, including detailed calculation steps.
+    - Total calculated weekly expense amount formatted clearly.
+    - Identification of any discrepancies or unusual expenses that may require further explanation.
+    - Comments on any cost-saving opportunities or potential financial management strategies.
+    """,
     )
 
     story_analysis_task = Task(
         description="Synthesize the financial story with the calculated income and expenses to provide a comprehensive analysis.",
-        agent=story_agent,  # Third step in assessment
+        agent=story_agent,
+        expected_output="""
+    A narrative analysis that includes:
+    - A summary of the student's financial situation, capturing their personal story and context.
+    - Identification of any shortfall or surplus (weekly income - weekly expenses) with the weekly calculations done.
+    - Detailed insights into specific financial challenges or factors affecting their situation (e.g., recent job loss, upcoming expenses, life events).
+    - An assessment of the student's overall financial stability and risk factors.
+    """,
     )
 
     final_decision_task = Task(
-        description="Document the final decision on the financial assistance request, including the rationale. Prepare the case for review by a manager if the recommended amount exceeds your approval limit.",
-        agent=recommend_agent,  # Final step in decision-making
+        description="Document the final decision on the financial assistance request, including the rationale.",
+        agent=recommend_agent,
+        expected_output="""
+    A final recommendation report containing:
+    - A proposed amount of financial assistance to be provided, with a specific dollar value (e.g., "$400 for 4 weeks of food and transport costs").
+    - A clear and logical justification for the recommended amount, referencing the student's financial situation and needs.
+    - Contingency plans or alternative recommendations if the decision requires managerial review (e.g., "Recommend $800, but refer to manager for review as it exceeds the $500 threshold. Reason for recommending $800... ie student needs rent, petrol, food support for this 6 week period where no income from the part-time job can be gained due to placement internship taking up all work hours. ")
+    - A concise summary of key points that influenced the decision, including any identified risks, special circumstances, or needs.
+    - Any recommendations for future follow-ups or additional support the student may require ie keyworker but this is not a must, only if seems necessary.
+    """,
     )
 
     return [income_agent, expense_agent, story_agent, recommend_agent], [
