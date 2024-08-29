@@ -60,6 +60,11 @@ def extract_situation(pdf_text):
     return "Unknown"
 
 
+# Function to display progress in Streamlit
+def log_progress(progress_placeholder, message):
+    progress_placeholder.text(message)
+
+
 # Define the agents and tasks
 def define_agents_and_tasks(pdf_text):
     # Extract specific information for the StoryAgent
@@ -173,51 +178,51 @@ def define_agents_and_tasks(pdf_text):
         description="Assess the financial needs of each student based on their application, documentation, and financial situation.",
         agent=income_agent,
         expected_output="""
-    A detailed report containing:
-    - A breakdown of all income sources, including type, amount, and frequency (weekly, fortnightly, monthly).
-    - Conversion of all non-weekly income amounts to a weekly basis with clear calculations.
-    - Total calculated weekly income amount in a clear and concise format.
-    - Identification of any irregularities or special considerations affecting income calculations (e.g., one-off payments or variable income).
-    - Additional notes or assumptions made during calculations.
-    """,
+        A detailed report containing:
+        - A breakdown of all income sources, including type, amount, and frequency (weekly, fortnightly, monthly).
+        - Conversion of all non-weekly income amounts to a weekly basis with clear calculations.
+        - Total calculated weekly income amount in a clear and concise format.
+        - Identification of any irregularities or special considerations affecting income calculations (e.g., one-off payments or variable income).
+        - Additional notes or assumptions made during calculations.
+        """,
     )
 
     expense_assessment_task = Task(
         description="Assess the student's weekly expenses based on their provided financial information.",
         agent=expense_agent,
         expected_output="""
-    A comprehensive breakdown of the student's weekly expenses, including:
-    - Itemized list of all regular expenses with type, amount, and frequency (weekly, fortnightly, monthly).
-    - Conversion of all non-weekly expenses to a weekly basis, including detailed calculation steps.
-    - Total calculated weekly expense amount formatted clearly.
-    - Identification of any discrepancies or unusual expenses that may require further explanation.
-    - Comments on any cost-saving opportunities or potential financial management strategies.
-    """,
+        A comprehensive breakdown of the student's weekly expenses, including:
+        - Itemized list of all regular expenses with type, amount, and frequency (weekly, fortnightly, monthly).
+        - Conversion of all non-weekly expenses to a weekly basis, including detailed calculation steps.
+        - Total calculated weekly expense amount formatted clearly.
+        - Identification of any discrepancies or unusual expenses that may require further explanation.
+        - Comments on any cost-saving opportunities or potential financial management strategies.
+        """,
     )
 
     story_analysis_task = Task(
         description="Synthesize the financial story with the calculated income and expenses to provide a comprehensive analysis.",
         agent=story_agent,
         expected_output="""
-    A narrative analysis that includes:
-    - A summary of the student's financial situation, capturing their personal story and context.
-    - Identification of any shortfall or surplus (weekly income - weekly expenses) with the weekly calculations done.
-    - Detailed insights into specific financial challenges or factors affecting their situation (e.g., recent job loss, upcoming expenses, life events).
-    - An assessment of the student's overall financial stability and risk factors.
-    """,
+        A narrative analysis that includes:
+        - A summary of the student's financial situation, capturing their personal story and context.
+        - Identification of any shortfall or surplus (weekly income - weekly expenses) with the weekly calculations done.
+        - Detailed insights into specific financial challenges or factors affecting their situation (e.g., recent job loss, upcoming expenses, life events).
+        - An assessment of the student's overall financial stability and risk factors.
+        """,
     )
 
     final_decision_task = Task(
         description="Document the final decision on the financial assistance request, including the rationale.",
         agent=recommend_agent,
         expected_output="""
-    A final recommendation report containing:
-    - A proposed amount of financial assistance to be provided, with a specific dollar value (e.g., "$400 for 4 weeks of food and transport costs").
-    - A clear and logical justification for the recommended amount, referencing the student's financial situation and needs.
-    - Contingency plans or alternative recommendations if the decision requires managerial review (e.g., "Recommend $800, but refer to manager for review as it exceeds the $500 threshold. Reason for recommending $800... ie student needs rent, petrol, food support for this 6 week period where no income from the part-time job can be gained due to placement internship taking up all work hours. ")
-    - A concise summary of key points that influenced the decision, including any identified risks, special circumstances, or needs.
-    - Any recommendations for future follow-ups or additional support the student may require ie keyworker but this is not a must, only if seems necessary.
-    """,
+        A final recommendation report containing:
+        - A proposed amount of financial assistance to be provided, with a specific dollar value (e.g., "$400 for 4 weeks of food and transport costs").
+        - A clear and logical justification for the recommended amount, referencing the student's financial situation and needs.
+        - Contingency plans or alternative recommendations if the decision requires managerial review (e.g., "Recommend $800, but refer to manager for review as it exceeds the $500 threshold. Reason for recommending $800... ie student needs rent, petrol, food support for this 6 week period where no income from the part-time job can be gained due to placement internship taking up all work hours. ")
+        - A concise summary of key points that influenced the decision, including any identified risks, special circumstances, or needs.
+        - Any recommendations for future follow-ups or additional support the student may require ie keyworker but this is not a must, only if seems necessary.
+        """,
     )
 
     return [income_agent, expense_agent, story_agent, recommend_agent], [
@@ -247,12 +252,18 @@ if uploaded_file:
         verbose=2,
     )
 
+    # Placeholder for progress
+    progress_placeholder = st.empty()
+
     # Display spinner and run CrewAI
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
     ):
-        result = crew.kickoff()
+        # Run tasks manually and log progress
+        for task in tasks:
+            log_progress(progress_placeholder, f"Running {task.description}...")
+            result = task.agent.perform_task(task)
 
-    # Display the result after the spinner is done
+    # Display the final result
     st.subheader("CrewAI Assessment Result")
     st.write(result)
