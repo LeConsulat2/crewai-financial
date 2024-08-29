@@ -37,7 +37,6 @@ def extract_pdf_text(pdf_file):
 
 # Improved extraction functions using refined regular expressions
 def extract_support_type(pdf_text):
-    # Refined regex pattern to handle line breaks and spaces
     match = re.search(
         r"Please\s*select\s*the\s*type\(s\)\s*of\s*financial\s*support\s*you\s*are\s*requesting\s*([\s\S]*?)\s*Please\s*tell\s*us\s*briefly\s*about\s*your\s*situation\s*and\s*why\s*you\s*are\s*seeking\s*financial\s*support",
         pdf_text,
@@ -49,7 +48,6 @@ def extract_support_type(pdf_text):
 
 
 def extract_situation(pdf_text):
-    # Refined regex pattern to handle line breaks and spaces
     match = re.search(
         r"Please\s*tell\s*us\s*briefly\s*about\s*your\s*situation\s*and\s*why\s*you\s*are\s*seeking\s*financial\s*support\s*([\s\S]*?)\s*What\s*is\s*your\s*income\?",
         pdf_text,
@@ -60,22 +58,23 @@ def extract_situation(pdf_text):
     return "Unknown"
 
 
-# Function to display progress in Streamlit
-def log_progress(progress_placeholder, message):
-    progress_placeholder.text(message)
+# Custom function to handle progress updates
+class ProgressHandler:
+    def __init__(self, placeholder):
+        self.placeholder = placeholder
+
+    def log(self, message):
+        self.placeholder.text(message)
 
 
 # Define the agents and tasks
 def define_agents_and_tasks(pdf_text):
-    # Extract specific information for the StoryAgent
     support_type, situation = extract_support_type(pdf_text), extract_situation(
         pdf_text
     )
 
-    # Initialize ChatOpenAI model
     chat_model = ChatOpenAI(temperature=0.5, model="gpt-4o-mini")
 
-    # Define IncomeAgent
     income_agent = Agent(
         role="Income Agent",
         goal="Calculate the total weekly income from the student's financial information.",
@@ -98,7 +97,6 @@ def define_agents_and_tasks(pdf_text):
         verbose=True,
     )
 
-    # Define ExpenseAgent
     expense_agent = Agent(
         role="Expense Agent",
         goal="Calculate the total weekly expenses from the student's financial information.",
@@ -121,7 +119,6 @@ def define_agents_and_tasks(pdf_text):
         verbose=True,
     )
 
-    # Define StoryAgent
     story_agent = Agent(
         role="Story Agent",
         goal="Analyze the student's financial situation based on their story and financial data.",
@@ -154,7 +151,6 @@ def define_agents_and_tasks(pdf_text):
         verbose=True,
     )
 
-    # Define RecommendAgent
     recommend_agent = Agent(
         role="Recommend Agent",
         goal="Provide a final recommendation on financial assistance, including amount and justification.",
@@ -173,7 +169,6 @@ def define_agents_and_tasks(pdf_text):
         verbose=True,
     )
 
-    # Define tasks
     financial_assessment_task = Task(
         description="Assess the financial needs of each student based on their application, documentation, and financial situation.",
         agent=income_agent,
@@ -239,30 +234,18 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file:
-    # Extract text from uploaded PDF
     pdf_text = extract_pdf_text(uploaded_file)
-
-    # Initialize the agents and tasks with the extracted text
     agents, tasks = define_agents_and_tasks(pdf_text)
+    crew = Crew(tasks=tasks, agents=agents, verbose=2)
 
-    # Create the crew instance
-    crew = Crew(
-        tasks=tasks,
-        agents=agents,
-        verbose=2,
-    )
-
-    # Placeholder for progress
     progress_placeholder = st.empty()
+    progress_handler = ProgressHandler(progress_placeholder)
 
     # Display spinner and run CrewAI
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
     ):
-        # Run tasks manually and log progress
-        for task in tasks:
-            log_progress(progress_placeholder, f"Running {task.description}...")
-            result = task.agent.perform_task(task)
+        result = crew.kickoff(progress_callback=progress_handler.log)
 
     # Display the final result
     st.subheader("CrewAI Assessment Result")
