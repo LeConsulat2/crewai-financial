@@ -259,7 +259,7 @@ if pdf_file:
     # Define agents and tasks with the raw extracted text
     agents, tasks = define_agents_and_tasks(
         extracted_text
-    )  # Correctly passing raw text
+    )  # Ensure to pass extracted_text
 
     # Create Crew instance with defined tasks and agents
     crew = Crew(tasks=tasks, agents=agents, verbose=2)
