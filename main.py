@@ -126,7 +126,14 @@ def define_agents_and_tasks(extracted_data):
         goal="Calculate the total weekly income from the student's financial information.",
         backstory="You are responsible for accurately calculating the total weekly income from the student's financial documents.",
         prompt_template=PromptTemplate(
-            template="Calculate the total weekly income for the student. Convert any fortnightly income by dividing by 2 and any monthly income by dividing by 4 and once all converted to weekly, add all the weekly incomes which will show the average weekly income.\n\nStudent's financial information:\n{income}",
+            template="""
+            Calculate the total weekly income for the student. Convert any fortnightly income by dividing by 2 
+            and any monthly income by dividing by 4. Once all converted to weekly, add all the weekly incomes 
+            to show the average weekly income.
+
+            Student's financial information:
+            {income}
+            """,
             input_variables=["income"],
         ),
         perform_task=lambda task: chat_model.predict(
@@ -136,11 +143,17 @@ def define_agents_and_tasks(extracted_data):
     )
 
     living_cost_agent = Agent(
-        role="living_cost_agent",
-        goal="Calculate the total weekly living_cost from the student's financial information.",
-        backstory="You are responsible for calculating the student's weekly living_cost, ensuring all costs are accounted for, including fortnightly and monthly.",
+        role="Living Cost Agent",
+        goal="Calculate the total weekly living costs from the student's financial information.",
+        backstory="You are responsible for calculating the student's weekly living costs, ensuring all costs are accounted for, including fortnightly and monthly.",
         prompt_template=PromptTemplate(
-            template="Calculate the total weekly living_cost for the student. Convert any fortnightly living_cost by dividing by 2 and any monthly living_cost by dividing by 4.\n\nStudent's financial information:\n{living_cost}",
+            template="""
+            Calculate the total weekly living costs for the student. Convert any fortnightly living costs by dividing by 2 
+            and any monthly living costs by dividing by 4.
+
+            Student's financial information:
+            {living_cost}
+            """,
             input_variables=["living_cost"],
         ),
         perform_task=lambda task: chat_model.predict(
@@ -152,9 +165,21 @@ def define_agents_and_tasks(extracted_data):
     story_agent = Agent(
         role="Story Agent",
         goal="Analyze the student's financial situation based on their story and financial data.",
-        backstory="Your role is to analyze the student's overall financial situation by synthesizing their narrative with the calculated income and living_cost.",
+        backstory="Your role is to analyze the student's overall financial situation by synthesizing their narrative with the calculated income and living costs.",
         prompt_template=PromptTemplate(
-            template="Analyze the student's financial situation based on their story and financial data. Identify any overall shortfall or surplus (weekly income - weekly living_cost), and highlight factors such as job loss, placements, or other significant financial challenges.\n\nType(s) of Financial Support Requested: {support_type}\n\nReason for Seeking Financial Support:\n{situation}\n\nWeekly Income: {income}\nWeekly living_cost: {living_cost}",
+            template="""
+            Analyze the student's financial situation based on their story and financial data. Identify any overall 
+            shortfall or surplus (weekly income - weekly living costs), and highlight factors such as job loss, placements, 
+            or other significant financial challenges.
+
+            Type(s) of Financial Support Requested: {support_type}
+
+            Reason for Seeking Financial Support:
+            {situation}
+
+            Weekly Income: {income}
+            Weekly Living Costs: {living_cost}
+            """,
             input_variables=["support_type", "situation", "income", "living_cost"],
         ),
         perform_task=lambda task: chat_model.predict(
@@ -173,7 +198,10 @@ def define_agents_and_tasks(extracted_data):
         goal="Provide a final recommendation on financial assistance, including amount and justification.",
         backstory="Your task is to review the student's financial situation analysis and make a final recommendation on the amount of financial assistance that should be provided.",
         prompt_template=PromptTemplate(
-            template="Based on the following financial situation and story, provide a final recommendation on how much financial assistance the student should receive.",
+            template="""
+            Based on the following financial situation and story, provide a final recommendation on how much financial assistance 
+            the student should receive.
+            """,
             input_variables=["story_info"],
         ),
         perform_task=lambda task: chat_model.predict(
