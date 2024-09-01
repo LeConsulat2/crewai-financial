@@ -111,8 +111,10 @@ def combine_extracted_sections(text):
     return details
 
 
-# Function to define agents and tasks based on extracted data
-def define_agents_and_tasks(extracted_data):
+# Function to define agents and tasks based on raw text input
+def define_agents_and_tasks(text):
+    # Combine extracted sections directly inside this function
+    extracted_data = combine_extracted_sections(text)
     chat_model = ChatOpenAI(temperature=0.5, model="gpt-4o-mini")
 
     # Extracted data from the sections
