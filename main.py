@@ -34,15 +34,6 @@ def extract_pdf_text(pdf_file):
     return extracted_text
 
 
-# Function to extract text from PDF using pdfplumber
-def extract_pdf_text(pdf_file):
-    with pdfplumber.open(pdf_file) as pdf:
-        extracted_text = "\n".join(
-            page.extract_text() for page in pdf.pages if page.extract_text()
-        )
-    return extracted_text
-
-
 # Functions to extract each section using case-insensitive search
 def extract_student_details(text):
     text_lower = text.lower()
@@ -266,7 +257,9 @@ if pdf_file:
         st.stop()
 
     # Define agents and tasks with the extracted data
-    agents, tasks = define_agents_and_tasks(extracted_sections)
+    agents, tasks = define_agents_and_tasks(
+        extracted_text
+    )  # Pass raw text if required by the function
 
     # Create Crew instance with defined tasks and agents
     crew = Crew(tasks=tasks, agents=agents, verbose=2)
