@@ -211,13 +211,13 @@ def define_agents_and_tasks(text):
     )
 
     living_cost_assessment_task = Task(
-        description="Assess the student's weekly living_cost based on their provided financial information.",
+        description="Assess the student's weekly living costs based on their provided financial information.",
         agent=living_cost_agent,
-        expected_output="A comprehensive breakdown of the student's weekly living_cost.",
+        expected_output="A comprehensive breakdown of the student's weekly living costs.",
     )
 
     story_analysis_task = Task(
-        description="Synthesize the financial story with the calculated income and living_cost to provide a comprehensive analysis.",
+        description="Synthesize the financial story with the calculated income and living costs to provide a comprehensive analysis.",
         agent=story_agent,
         expected_output="A narrative analysis that includes the summary of the student's financial situation.",
     )
@@ -256,10 +256,10 @@ if pdf_file:
         st.warning("Processing stopped by user.")
         st.stop()
 
-    # Define agents and tasks with the extracted data
+    # Define agents and tasks with the raw extracted text
     agents, tasks = define_agents_and_tasks(
         extracted_text
-    )  # Pass raw text if required by the function
+    )  # Correctly passing raw text
 
     # Create Crew instance with defined tasks and agents
     crew = Crew(tasks=tasks, agents=agents, verbose=2)
