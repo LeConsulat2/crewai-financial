@@ -34,47 +34,65 @@ def extract_pdf_text(pdf_file):
     return extracted_text
 
 
-# Functions to extract each section using pdfplumber
+# Function to extract text from PDF using pdfplumber
+def extract_pdf_text(pdf_file):
+    with pdfplumber.open(pdf_file) as pdf:
+        extracted_text = "\n".join(
+            page.extract_text() for page in pdf.pages if page.extract_text()
+        )
+    return extracted_text
+
+
+# Functions to extract each section using case-insensitive search
 def extract_student_details(text):
-    start = text.find("Student details")
-    end = text.find("Māori advisor required?")
+    text_lower = text.lower()
+    start = text_lower.find("student details")
+    end = text_lower.find("māori advisor required?")
     return text[start:end].strip() if start != -1 and end != -1 else "Not found"
 
 
 def extract_support_types(text):
-    start = text.find(
-        "Please select the type(s) of financial support you are requesting"
+    text_lower = text.lower()
+    start = text_lower.find(
+        "please select the type(s) of financial support you are requesting"
     )
-    end = text.find("Please tell us briefly about your situation")
+    end = text_lower.find("please tell us briefly about your situation")
     return text[start:end].strip() if start != -1 and end != -1 else "Not found"
 
 
 def extract_support_reason(text):
-    start = text.find("Please tell us briefly about your situation")
-    end = text.find("What is your income?")
+    text_lower = text.lower()
+    start = text_lower.find("please tell us briefly about your situation")
+    end = text_lower.find("what is your income?")
     return text[start:end].strip() if start != -1 and end != -1 else "Not found"
 
 
 def extract_income_details(text):
-    start = text.find("What is your income?")
-    end = text.find("What are your regular essential living costs?")
+    text_lower = text.lower()
+    start = text_lower.find("what is your income?")
+    end = text_lower.find("what are your regular essential living costs?")
     return text[start:end].strip() if start != -1 and end != -1 else "Not found"
 
 
 def extract_living_costs(text):
-    start = text.find("What are your regular essential living costs?")
-    end = text.find("What is your current living situation?")
+    text_lower = text.lower()
+    start = text_lower.find("what are your regular essential living costs?")
+    end = text_lower.find("what is your current living situation?")
     return text[start:end].strip() if start != -1 and end != -1 else "Not found"
 
 
 def extract_living_situation(text):
-    start = text.find("What is your current living situation?")
-    end = text.find("Do you have any children or other dependants in your care?")
+    text_lower = text.lower()
+    start = text_lower.find("what is your current living situation?")
+    end = text_lower.find("do you have any children or other dependants in your care?")
     return text[start:end].strip() if start != -1 and end != -1 else "Not found"
 
 
 def extract_dependants(text):
-    start = text.find("Do you have any children or other dependants in your care?")
+    text_lower = text.lower()
+    start = text_lower.find(
+        "do you have any children or other dependants in your care?"
+    )
     end = len(text)
     return text[start:end].strip() if start != -1 else "Not found"
 
@@ -101,7 +119,7 @@ def define_agents_and_tasks(extracted_data):
     support_type = extracted_data.get("Types of Financial Support", "Not found")
     situation = extracted_data.get("Reason for Support", "Not found")
     income = extracted_data.get("Income Details", "Not found")
-    expenses = extracted_data.get("Living Costs", "Not found")
+    living_cost = extracted_data.get("Living Costs", "Not found")
 
     income_agent = Agent(
         role="Income Agent",
@@ -119,14 +137,14 @@ def define_agents_and_tasks(extracted_data):
 
     living_cost_agent = Agent(
         role="living_cost_agent",
-        goal="Calculate the total weekly expenses from the student's financial information.",
-        backstory="You are responsible for calculating the student's weekly expenses, ensuring all costs are accounted for, including fortnightly and monthly.",
+        goal="Calculate the total weekly living_cost from the student's financial information.",
+        backstory="You are responsible for calculating the student's weekly living_cost, ensuring all costs are accounted for, including fortnightly and monthly.",
         prompt_template=PromptTemplate(
-            template="Calculate the total weekly expenses for the student. Convert any fortnightly expenses by dividing by 2 and any monthly expenses by dividing by 4.\n\nStudent's financial information:\n{expenses}",
-            input_variables=["expenses"],
+            template="Calculate the total weekly living_cost for the student. Convert any fortnightly living_cost by dividing by 2 and any monthly living_cost by dividing by 4.\n\nStudent's financial information:\n{living_cost}",
+            input_variables=["living_cost"],
         ),
         perform_task=lambda task: chat_model.predict(
-            task.agent.prompt_template.format(expenses=task.input_data)
+            task.agent.prompt_template.format(living_cost=task.input_data)
         ),
         verbose=True,
     )
@@ -134,17 +152,17 @@ def define_agents_and_tasks(extracted_data):
     story_agent = Agent(
         role="Story Agent",
         goal="Analyze the student's financial situation based on their story and financial data.",
-        backstory="Your role is to analyze the student's overall financial situation by synthesizing their narrative with the calculated income and expenses.",
+        backstory="Your role is to analyze the student's overall financial situation by synthesizing their narrative with the calculated income and living_cost.",
         prompt_template=PromptTemplate(
-            template="Analyze the student's financial situation based on their story and financial data. Identify any overall shortfall or surplus (weekly income - weekly expense), and highlight factors such as job loss, placements, or other significant financial challenges.\n\nType(s) of Financial Support Requested: {support_type}\n\nReason for Seeking Financial Support:\n{situation}\n\nWeekly Income: {income}\nWeekly Expenses: {expenses}",
-            input_variables=["support_type", "situation", "income", "expenses"],
+            template="Analyze the student's financial situation based on their story and financial data. Identify any overall shortfall or surplus (weekly income - weekly living_cost), and highlight factors such as job loss, placements, or other significant financial challenges.\n\nType(s) of Financial Support Requested: {support_type}\n\nReason for Seeking Financial Support:\n{situation}\n\nWeekly Income: {income}\nWeekly living_cost: {living_cost}",
+            input_variables=["support_type", "situation", "income", "living_cost"],
         ),
         perform_task=lambda task: chat_model.predict(
             task.agent.prompt_template.format(
                 support_type=support_type,
                 situation=situation,
                 income=income,
-                expenses=expenses,
+                living_cost=living_cost,
             )
         ),
         verbose=True,
@@ -172,13 +190,13 @@ def define_agents_and_tasks(extracted_data):
     )
 
     living_cost_assessment_task = Task(
-        description="Assess the student's weekly expenses based on their provided financial information.",
+        description="Assess the student's weekly living_cost based on their provided financial information.",
         agent=living_cost_agent,
-        expected_output="A comprehensive breakdown of the student's weekly expenses.",
+        expected_output="A comprehensive breakdown of the student's weekly living_cost.",
     )
 
     story_analysis_task = Task(
-        description="Synthesize the financial story with the calculated income and expenses to provide a comprehensive analysis.",
+        description="Synthesize the financial story with the calculated income and living_cost to provide a comprehensive analysis.",
         agent=story_agent,
         expected_output="A narrative analysis that includes the summary of the student's financial situation.",
     )
