@@ -5,6 +5,7 @@ import os
 from crewai import Crew, Agent, Task
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
+from functools import lru_cache
 
 # Load environment variables
 load_dotenv()
@@ -28,81 +29,68 @@ st.title("Financial Hardship Assessment (CrewAI)")
 # Function to extract text from PDF using pdfplumber
 def extract_pdf_text(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
+        # Using list comprehension and filtering out None to handle missing text
         extracted_text = "\n".join(
-            page.extract_text() for page in pdf.pages if page.extract_text()
+            filter(None, [page.extract_text() for page in pdf.pages])
         )
     return extracted_text
 
 
-# Functions to extract each section using case-insensitive search
-def extract_student_details(text):
-    text_lower = text.lower()
-    start = text_lower.find("student details")
-    end = text_lower.find("māori advisor required?")
+# Utility function to extract sections from the text
+def extract_section(text, start_keyword, end_keyword):
+    start = text.find(start_keyword)
+    end = text.find(end_keyword) if end_keyword else len(text)
     return text[start:end].strip() if start != -1 and end != -1 else "Not found"
 
 
-def extract_support_types(text):
-    text_lower = text.lower()
-    start = text_lower.find(
-        "please select the type(s) of financial support you are requesting"
-    )
-    end = text_lower.find("please tell us briefly about your situation")
-    return text[start:end].strip() if start != -1 and end != -1 else "Not found"
-
-
-def extract_support_reason(text):
-    text_lower = text.lower()
-    start = text_lower.find("please tell us briefly about your situation")
-    end = text_lower.find("what is your income?")
-    return text[start:end].strip() if start != -1 and end != -1 else "Not found"
-
-
-def extract_income_details(text):
-    text_lower = text.lower()
-    start = text_lower.find("what is your income?")
-    end = text_lower.find("what are your regular essential living costs?")
-    return text[start:end].strip() if start != -1 and end != -1 else "Not found"
-
-
-def extract_living_costs(text):
-    text_lower = text.lower()
-    start = text_lower.find("what are your regular essential living costs?")
-    end = text_lower.find("what is your current living situation?")
-    return text[start:end].strip() if start != -1 and end != -1 else "Not found"
-
-
-def extract_living_situation(text):
-    text_lower = text.lower()
-    start = text_lower.find("what is your current living situation?")
-    end = text_lower.find("do you have any children or other dependants in your care?")
-    return text[start:end].strip() if start != -1 and end != -1 else "Not found"
-
-
-def extract_dependants(text):
-    text_lower = text.lower()
-    start = text_lower.find(
-        "do you have any children or other dependants in your care?"
-    )
-    end = len(text)
-    return text[start:end].strip() if start != -1 else "Not found"
-
-
-# Function to combine all extracted sections
+# Combine extraction functions using the utility function
 def combine_extracted_sections(text):
+    text_lower = text.lower()
     details = {
-        "Student Details": extract_student_details(text),
-        "Types of Financial Support": extract_support_types(text),
-        "Reason for Support": extract_support_reason(text),
-        "Income Details": extract_income_details(text),
-        "Living Costs": extract_living_costs(text),
-        "Living Situation": extract_living_situation(text),
-        "Dependants": extract_dependants(text),
+        "Student Details": extract_section(
+            text_lower, "student details", "māori advisor required?"
+        ),
+        "Types of Financial Support": extract_section(
+            text_lower,
+            "please select the type(s) of financial support you are requesting",
+            "please tell us briefly about your situation",
+        ),
+        "Reason for Support": extract_section(
+            text_lower,
+            "please tell us briefly about your situation",
+            "what is your income?",
+        ),
+        "Income Details": extract_section(
+            text_lower,
+            "what is your income?",
+            "what are your regular essential living costs?",
+        ),
+        "Living Costs": extract_section(
+            text_lower,
+            "what are your regular essential living costs?",
+            "what is your current living situation?",
+        ),
+        "Living Situation": extract_section(
+            text_lower,
+            "what is your current living situation?",
+            "do you have any children or other dependants in your care?",
+        ),
+        "Dependants": extract_section(
+            text_lower,
+            "do you have any children or other dependants in your care?",
+            None,
+        ),
     }
     return details
 
 
-# Define agents separately
+# Use caching to avoid redundant processing for similar inputs
+@lru_cache(maxsize=10)
+def get_cached_analysis(agent, input_data):
+    return agent.perform_task(input_data)
+
+
+# Define agents with lambda functions using cached analysis
 chat_model = ChatOpenAI(temperature=0.5, model="gpt-4o-mini")
 
 income_agent = Agent(
@@ -120,10 +108,10 @@ income_agent = Agent(
         """,
         input_variables=["income"],
     ),
-    perform_task=lambda task: chat_model.predict(
-        task.agent.prompt_template.format(income=task.input_data)
+    perform_task=lambda task: get_cached_analysis(
+        chat_model, task.agent.prompt_template.format(income=task.input_data)
     ),
-    verbose=True,
+    verbose=False,
 )
 
 living_cost_agent = Agent(
@@ -140,10 +128,10 @@ living_cost_agent = Agent(
         """,
         input_variables=["living_cost"],
     ),
-    perform_task=lambda task: chat_model.predict(
-        task.agent.prompt_template.format(living_cost=task.input_data)
+    perform_task=lambda task: get_cached_analysis(
+        chat_model, task.agent.prompt_template.format(living_cost=task.input_data)
     ),
-    verbose=True,
+    verbose=False,
 )
 
 story_agent = Agent(
@@ -166,15 +154,16 @@ story_agent = Agent(
         """,
         input_variables=["support_type", "situation", "income", "living_cost"],
     ),
-    perform_task=lambda task: chat_model.predict(
+    perform_task=lambda task: get_cached_analysis(
+        chat_model,
         task.agent.prompt_template.format(
             support_type=task.input_data["support_type"],
             situation=task.input_data["situation"],
             income=task.input_data["income"],
             living_cost=task.input_data["living_cost"],
-        )
+        ),
     ),
-    verbose=True,
+    verbose=False,
 )
 
 recommend_agent = Agent(
@@ -188,13 +177,13 @@ recommend_agent = Agent(
         """,
         input_variables=["story_info"],
     ),
-    perform_task=lambda task: chat_model.predict(
-        task.agent.prompt_template.format(story_info=task.input_data)
+    perform_task=lambda task: get_cached_analysis(
+        chat_model, task.agent.prompt_template.format(story_info=task.input_data)
     ),
-    verbose=True,
+    verbose=False,
 )
 
-# Define tasks separately using the defined agents
+# Define tasks
 financial_assessment_task = Task(
     description="Assess the financial needs of each student based on their application, documentation, and financial situation.",
     agent=income_agent,
@@ -220,9 +209,8 @@ final_decision_task = Task(
 )
 
 
-# Function renamed to 'information' to use the extracted data
+# Information function to define agents and tasks
 def information(extracted_data):
-    # Return agents and tasks for CrewAI
     return [income_agent, living_cost_agent, story_agent, recommend_agent], [
         financial_assessment_task,
         living_cost_assessment_task,
@@ -231,13 +219,10 @@ def information(extracted_data):
     ]
 
 
-# Upload PDF file
+# Upload PDF file and process
 pdf_file = st.file_uploader("Upload PDF", type=["pdf"])
 if pdf_file:
-    # Extract text from the uploaded PDF
     extracted_text = extract_pdf_text(pdf_file)
-
-    # Combine and extract relevant sections
     extracted_sections = combine_extracted_sections(extracted_text)
 
     # Display extracted sections
@@ -245,7 +230,6 @@ if pdf_file:
         st.subheader(section)
         st.write(content)
 
-    # Add a stop button for the user to stop execution if needed
     if st.button("Stop Processing"):
         st.warning("Processing stopped by user.")
         st.stop()
@@ -253,19 +237,16 @@ if pdf_file:
     # Define agents and tasks with the extracted data
     agents, tasks = information(extracted_sections)
 
-    # Create Crew instance with defined tasks and agents
-    crew = Crew(tasks=tasks, agents=agents, verbose=2)
+    # Create Crew instance and run tasks
+    crew = Crew(tasks=tasks, agents=agents, verbose=False)
 
-    progress_placeholder = st.empty()
-
-    # Display spinner and run CrewAI
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
     ):
         try:
             result = crew.kickoff()
 
-            # Manually simulate progress logging
+            # Log task progress
             for i, task in enumerate(tasks):
                 st.write(f"Completed task {i + 1}/{len(tasks)}: {task.description}")
 
