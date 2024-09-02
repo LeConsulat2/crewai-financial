@@ -111,7 +111,7 @@ income_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         chat_model, task.agent.prompt_template.format(income=task.input_data)
     ),
-    verbose=2,
+    verbose=True,
 )
 
 living_cost_agent = Agent(
@@ -131,7 +131,7 @@ living_cost_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         chat_model, task.agent.prompt_template.format(living_cost=task.input_data)
     ),
-    verbose=2,
+    verbose=True,
 )
 
 story_agent = Agent(
@@ -163,7 +163,7 @@ story_agent = Agent(
             living_cost=task.input_data["living_cost"],
         ),
     ),
-    verbose=2,
+    verbose=True,
 )
 
 recommend_agent = Agent(
@@ -180,7 +180,7 @@ recommend_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         chat_model, task.agent.prompt_template.format(story_info=task.input_data)
     ),
-    verbose=2,
+    verbose=True,
 )
 
 # Define tasks
@@ -238,7 +238,7 @@ if pdf_file:
     agents, tasks = information(extracted_sections)
 
     # Create Crew instance and run tasks
-    crew = Crew(tasks=tasks, agents=agents, verbose=2)
+    crew = Crew(tasks=tasks, agents=agents, verbose=True)
 
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
