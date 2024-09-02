@@ -90,7 +90,7 @@ def get_cached_analysis(agent, input_data):
     return agent.perform_task(input_data)
 
 
-# Define agents with lambda functions using cached analysis
+# Define agents with verbose mode enabled
 chat_model = ChatOpenAI(temperature=0.5, model="gpt-4o-mini")
 
 income_agent = Agent(
@@ -111,7 +111,7 @@ income_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         chat_model, task.agent.prompt_template.format(income=task.input_data)
     ),
-    verbose=True,
+    verbose=True,  ### Enable verbose output for detailed agent thoughts
 )
 
 living_cost_agent = Agent(
@@ -131,7 +131,7 @@ living_cost_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         chat_model, task.agent.prompt_template.format(living_cost=task.input_data)
     ),
-    verbose=True,
+    verbose=True,  ### Enable verbose output for detailed agent thoughts
 )
 
 story_agent = Agent(
@@ -163,7 +163,7 @@ story_agent = Agent(
             living_cost=task.input_data["living_cost"],
         ),
     ),
-    verbose=True,
+    verbose=True,  ### Enable verbose output for detailed agent thoughts
 )
 
 recommend_agent = Agent(
@@ -180,7 +180,7 @@ recommend_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         chat_model, task.agent.prompt_template.format(story_info=task.input_data)
     ),
-    verbose=True,
+    verbose=True,  ### Enable verbose output for detailed agent thoughts
 )
 
 # Define tasks
@@ -237,8 +237,10 @@ if pdf_file:
     # Define agents and tasks with the extracted data
     agents, tasks = information(extracted_sections)
 
-    # Create Crew instance and run tasks
-    crew = Crew(tasks=tasks, agents=agents, verbose=True)
+    # Create Crew instance and run tasks with verbose enabled
+    crew = Crew(
+        tasks=tasks, agents=agents, verbose=True
+    )  ### Enable verbose for Crew instance
 
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
@@ -249,6 +251,14 @@ if pdf_file:
             # Log task progress
             for i, task in enumerate(tasks):
                 st.write(f"Completed task {i + 1}/{len(tasks)}: {task.description}")
+
+            ### Display agent thoughts and conversations
+            st.subheader("Agents' Detailed Thoughts and Conversations")
+            for agent in agents:
+                st.write(f"### {agent.role} Thoughts:")
+                st.write(
+                    agent.perform_task(extracted_sections)
+                )  # Display detailed thoughts
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
