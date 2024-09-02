@@ -5,7 +5,6 @@ import os
 from crewai import Crew, Agent, Task
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
-from functools import lru_cache
 
 # Load environment variables
 load_dotenv()
@@ -84,12 +83,6 @@ def combine_extracted_sections(text):
     return details
 
 
-# Use caching to avoid redundant processing for similar inputs
-@lru_cache(maxsize=10)
-def get_cached_analysis(agent, input_data):
-    return agent.perform_task(input_data)
-
-
 # Define agents with verbose mode enabled
 chat_model = ChatOpenAI(temperature=0.5, model="gpt-4o-mini")
 
@@ -108,8 +101,8 @@ income_agent = Agent(
         """,
         input_variables=["income"],
     ),
-    perform_task=lambda task: get_cached_analysis(
-        chat_model, task.agent.prompt_template.format(income=task.input_data)
+    perform_task=lambda task: chat_model.predict(
+        task.agent.prompt_template.format(income=task.input_data)
     ),
     verbose=True,  ### Enable verbose output for detailed agent thoughts
 )
@@ -128,8 +121,8 @@ living_cost_agent = Agent(
         """,
         input_variables=["living_cost"],
     ),
-    perform_task=lambda task: get_cached_analysis(
-        chat_model, task.agent.prompt_template.format(living_cost=task.input_data)
+    perform_task=lambda task: chat_model.predict(
+        task.agent.prompt_template.format(living_cost=task.input_data)
     ),
     verbose=True,  ### Enable verbose output for detailed agent thoughts
 )
@@ -154,8 +147,7 @@ story_agent = Agent(
         """,
         input_variables=["support_type", "situation", "income", "living_cost"],
     ),
-    perform_task=lambda task: get_cached_analysis(
-        chat_model,
+    perform_task=lambda task: chat_model.predict(
         task.agent.prompt_template.format(
             support_type=task.input_data["support_type"],
             situation=task.input_data["situation"],
@@ -177,8 +169,8 @@ recommend_agent = Agent(
         """,
         input_variables=["story_info"],
     ),
-    perform_task=lambda task: get_cached_analysis(
-        chat_model, task.agent.prompt_template.format(story_info=task.input_data)
+    perform_task=lambda task: chat_model.predict(
+        task.agent.prompt_template.format(story_info=task.input_data)
     ),
     verbose=True,  ### Enable verbose output for detailed agent thoughts
 )
