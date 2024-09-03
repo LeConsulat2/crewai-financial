@@ -5,6 +5,7 @@ import os
 from crewai import Crew, Agent, Task
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
+from functools import lru_cache
 
 # Load environment variables
 load_dotenv()
@@ -28,7 +29,6 @@ st.title("Financial Hardship Assessment (CrewAI)")
 # Function to extract text from PDF using pdfplumber
 def extract_pdf_text(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
-        # Using list comprehension and filtering out None to handle missing text
         extracted_text = "\n".join(
             filter(None, [page.extract_text() for page in pdf.pages])
         )
@@ -83,7 +83,13 @@ def combine_extracted_sections(text):
     return details
 
 
-# Define agents with verbose mode enabled
+# Use caching to avoid redundant processing for similar inputs
+@lru_cache(maxsize=10)
+def get_cached_analysis(agent, input_data):
+    return agent.perform_task(input_data)
+
+
+# Define agents with lambda functions using cached analysis
 chat_model = ChatOpenAI(temperature=0.5, model="gpt-4o-mini")
 
 income_agent = Agent(
@@ -101,10 +107,10 @@ income_agent = Agent(
         """,
         input_variables=["income"],
     ),
-    perform_task=lambda task: chat_model.predict(
-        task.agent.prompt_template.format(income=task.input_data)
+    perform_task=lambda task: get_cached_analysis(
+        chat_model, task.agent.prompt_template.format(income=task.input_data)
     ),
-    verbose=True,  ### Enable verbose output for detailed agent thoughts
+    verbose=True,
 )
 
 living_cost_agent = Agent(
@@ -121,10 +127,10 @@ living_cost_agent = Agent(
         """,
         input_variables=["living_cost"],
     ),
-    perform_task=lambda task: chat_model.predict(
-        task.agent.prompt_template.format(living_cost=task.input_data)
+    perform_task=lambda task: get_cached_analysis(
+        chat_model, task.agent.prompt_template.format(living_cost=task.input_data)
     ),
-    verbose=True,  ### Enable verbose output for detailed agent thoughts
+    verbose=True,
 )
 
 story_agent = Agent(
@@ -147,7 +153,8 @@ story_agent = Agent(
         """,
         input_variables=["support_type", "situation", "income", "living_cost"],
     ),
-    perform_task=lambda task: chat_model.predict(
+    perform_task=lambda task: get_cached_analysis(
+        chat_model,
         task.agent.prompt_template.format(
             support_type=task.input_data["support_type"],
             situation=task.input_data["situation"],
@@ -155,7 +162,7 @@ story_agent = Agent(
             living_cost=task.input_data["living_cost"],
         ),
     ),
-    verbose=True,  ### Enable verbose output for detailed agent thoughts
+    verbose=True,
 )
 
 recommend_agent = Agent(
@@ -169,10 +176,10 @@ recommend_agent = Agent(
         """,
         input_variables=["story_info"],
     ),
-    perform_task=lambda task: chat_model.predict(
-        task.agent.prompt_template.format(story_info=task.input_data)
+    perform_task=lambda task: get_cached_analysis(
+        chat_model, task.agent.prompt_template.format(story_info=task.input_data)
     ),
-    verbose=True,  ### Enable verbose output for detailed agent thoughts
+    verbose=True,
 )
 
 # Define tasks
@@ -229,10 +236,8 @@ if pdf_file:
     # Define agents and tasks with the extracted data
     agents, tasks = information(extracted_sections)
 
-    # Create Crew instance and run tasks with verbose enabled
-    crew = Crew(
-        tasks=tasks, agents=agents, verbose=True
-    )  ### Enable verbose for Crew instance
+    # Create Crew instance and run tasks
+    crew = Crew(tasks=tasks, agents=agents, verbose=True)
 
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
@@ -243,14 +248,6 @@ if pdf_file:
             # Log task progress
             for i, task in enumerate(tasks):
                 st.write(f"Completed task {i + 1}/{len(tasks)}: {task.description}")
-
-            ### Display agent thoughts and conversations
-            st.subheader("Agents' Detailed Thoughts and Conversations")
-            for agent in agents:
-                st.write(f"### {agent.role} Thoughts:")
-                st.write(
-                    agent.perform_task(extracted_sections)
-                )  # Display detailed thoughts
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
