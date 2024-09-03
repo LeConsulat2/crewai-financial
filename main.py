@@ -90,7 +90,7 @@ def get_cached_analysis(prompt):
     return response.choices[0].text.strip()
 
 
-# Define agents with the backstory directly containing all instructions
+# Define agents with detailed verbose output for advanced insights
 income_agent = Agent(
     role="Income Agent",
     goal="Calculate the total weekly income from the student's financial information.",
@@ -107,7 +107,7 @@ income_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         task.agent.backstory.format(income=task.input_data)
     ),
-    verbose=False,
+    verbose=True,
     allow_delegation=False,
 )
 
@@ -127,7 +127,7 @@ living_cost_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         task.agent.backstory.format(living_cost=task.input_data)
     ),
-    verbose=False,
+    verbose=True,
     allow_delegation=False,
 )
 
@@ -140,7 +140,7 @@ story_agent = Agent(
     - Highlight factors such as job loss, placements, or other significant financial challenges.
 
     **Type(s) of Financial Support Requested:** {support_type}
-    
+
     **Reason for Seeking Financial Support:**
     {situation}
 
@@ -155,7 +155,7 @@ story_agent = Agent(
             living_cost=task.input_data["living_cost"],
         )
     ),
-    verbose=False,
+    verbose=True,
     allow_delegation=False,
 )
 
@@ -170,11 +170,11 @@ recommend_agent = Agent(
     perform_task=lambda task: get_cached_analysis(
         task.agent.backstory.format(story_info=task.input_data)
     ),
-    verbose=False,
+    verbose=True,
     allow_delegation=False,
 )
 
-# Define tasks
+# Define tasks directly
 financial_assessment_task = Task(
     description="Assess the financial needs of each student based on their application, documentation, and financial situation.",
     agent=income_agent,
@@ -199,17 +199,6 @@ final_decision_task = Task(
     expected_output="A final recommendation report containing the proposed amount of financial assistance.",
 )
 
-
-# Information function to define agents and tasks
-def information(extracted_data):
-    return [income_agent, living_cost_agent, story_agent, recommend_agent], [
-        financial_assessment_task,
-        living_cost_assessment_task,
-        story_analysis_task,
-        final_decision_task,
-    ]
-
-
 # Upload PDF file and process
 pdf_file = st.file_uploader("Upload PDF", type=["pdf"])
 if pdf_file:
@@ -226,10 +215,16 @@ if pdf_file:
         st.stop()
 
     # Define agents and tasks with the extracted data
-    agents, tasks = information(extracted_sections)
+    agents = [income_agent, living_cost_agent, story_agent, recommend_agent]
+    tasks = [
+        financial_assessment_task,
+        living_cost_assessment_task,
+        story_analysis_task,
+        final_decision_task,
+    ]
 
     # Create Crew instance and run tasks
-    crew = Crew(tasks=tasks, agents=agents, verbose=False)
+    crew = Crew(tasks=tasks, agents=agents, verbose=True)
 
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
@@ -248,3 +243,6 @@ if pdf_file:
     # Display the final result
     st.subheader("CrewAI Assessment Result")
     st.write(result)
+
+    # Stop execution after displaying the result to avoid unintended reruns
+    st.stop()
