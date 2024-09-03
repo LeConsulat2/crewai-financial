@@ -111,6 +111,7 @@ income_agent = Agent(
         chat_model, task.agent.prompt_template.format(income=task.input_data)
     ),
     verbose=True,
+    allow_delegation=False,
 )
 
 living_cost_agent = Agent(
@@ -131,6 +132,7 @@ living_cost_agent = Agent(
         chat_model, task.agent.prompt_template.format(living_cost=task.input_data)
     ),
     verbose=True,
+    allow_delegation=False,
 )
 
 story_agent = Agent(
@@ -163,6 +165,7 @@ story_agent = Agent(
         ),
     ),
     verbose=True,
+    allow_delegation=False,
 )
 
 recommend_agent = Agent(
@@ -180,6 +183,7 @@ recommend_agent = Agent(
         chat_model, task.agent.prompt_template.format(story_info=task.input_data)
     ),
     verbose=True,
+    allow_delegation=False,
 )
 
 # Define tasks
