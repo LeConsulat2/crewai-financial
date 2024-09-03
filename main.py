@@ -3,9 +3,8 @@ import pdfplumber
 from dotenv import load_dotenv
 import os
 from crewai import Crew, Agent, Task
-from langchain.prompts import PromptTemplate
-from langchain.chat_models import ChatOpenAI
 from functools import lru_cache
+import openai  # Direct use of OpenAI API
 
 # Load environment variables
 load_dotenv()
@@ -21,7 +20,6 @@ if not openai_api_key:
     st.stop()
 
 os.environ["OPENAI_API_KEY"] = openai_api_key
-os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 
 st.title("Financial Hardship Assessment (CrewAI)")
 
@@ -85,30 +83,29 @@ def combine_extracted_sections(text):
 
 # Use caching to avoid redundant processing for similar inputs
 @lru_cache(maxsize=10)
-def get_cached_analysis(agent, input_data):
-    return agent.perform_task(input_data)
+def get_cached_analysis(prompt):
+    response = openai.Completion.create(
+        model="gpt-4o-mini", prompt=prompt, max_tokens=500, temperature=0.5
+    )
+    return response.choices[0].text.strip()
 
 
-# Define agents with lambda functions using cached analysis
-chat_model = ChatOpenAI(temperature=0.5, model="gpt-4o-mini")
-
+# Define agents with the backstory directly containing all instructions
 income_agent = Agent(
     role="Income Agent",
     goal="Calculate the total weekly income from the student's financial information.",
-    backstory="You are responsible for accurately calculating the total weekly income from the student's financial documents.",
-    prompt_template=PromptTemplate(
-        template="""
-        Calculate the total weekly income for the student. Convert any fortnightly income by dividing by 2 
-        and any monthly income by dividing by 4. Once all converted to weekly, add all the weekly incomes 
-        to show the average weekly income.
+    backstory="""
+    ## Income Calculation
+    You are responsible for accurately calculating the total weekly income from the student's financial documents.
+    - Convert any fortnightly income by dividing by 2.
+    - Convert any monthly income by dividing by 4.
+    - Add all the weekly incomes to show the average weekly income.
 
-        Student's financial information:
-        {income}
-        """,
-        input_variables=["income"],
-    ),
+    **Student's financial information:**
+    {income}
+    """,
     perform_task=lambda task: get_cached_analysis(
-        chat_model, task.agent.prompt_template.format(income=task.input_data)
+        task.agent.backstory.format(income=task.input_data)
     ),
     verbose=True,
     allow_delegation=False,
@@ -117,19 +114,18 @@ income_agent = Agent(
 living_cost_agent = Agent(
     role="Living Cost Agent",
     goal="Calculate the total weekly living costs from the student's financial information.",
-    backstory="You are responsible for calculating the student's weekly living costs, ensuring all costs are accounted for, including fortnightly and monthly.",
-    prompt_template=PromptTemplate(
-        template="""
-        Calculate the total weekly living costs for the student. Convert any fortnightly living costs by dividing by 2 
-        and any monthly living costs by dividing by 4.
+    backstory="""
+    ## Living Cost Calculation
+    Calculate the total weekly living costs for the student.
+    - Convert any fortnightly living costs by dividing by 2.
+    - Convert any monthly living costs by dividing by 4.
+    - Add all the weekly living costs to show the average weekly living costs.
 
-        Student's financial information:
-        {living_cost}
-        """,
-        input_variables=["living_cost"],
-    ),
+    **Student's financial information:**
+    {living_cost}
+    """,
     perform_task=lambda task: get_cached_analysis(
-        chat_model, task.agent.prompt_template.format(living_cost=task.input_data)
+        task.agent.backstory.format(living_cost=task.input_data)
     ),
     verbose=True,
     allow_delegation=False,
@@ -138,31 +134,26 @@ living_cost_agent = Agent(
 story_agent = Agent(
     role="Story Agent",
     goal="Analyze the student's financial situation based on their story and financial data.",
-    backstory="Your role is to analyze the student's overall financial situation by synthesizing their narrative with the calculated income and living costs.",
-    prompt_template=PromptTemplate(
-        template="""
-        Analyze the student's financial situation based on their story and financial data. Identify any overall 
-        shortfall or surplus (weekly income - weekly living costs), and highlight factors such as job loss, placements, 
-        or other significant financial challenges.
+    backstory="""
+    ## Financial Situation Analysis
+    Analyze the student's financial situation based on their story and financial data. Identify any overall shortfall or surplus (weekly income - weekly living costs).
+    - Highlight factors such as job loss, placements, or other significant financial challenges.
 
-        Type(s) of Financial Support Requested: {support_type}
+    **Type(s) of Financial Support Requested:** {support_type}
+    
+    **Reason for Seeking Financial Support:**
+    {situation}
 
-        Reason for Seeking Financial Support:
-        {situation}
-
-        Weekly Income: {income}
-        Weekly Living Costs: {living_cost}
-        """,
-        input_variables=["support_type", "situation", "income", "living_cost"],
-    ),
+    **Weekly Income:** {income}
+    **Weekly Living Costs:** {living_cost}
+    """,
     perform_task=lambda task: get_cached_analysis(
-        chat_model,
-        task.agent.prompt_template.format(
+        task.agent.backstory.format(
             support_type=task.input_data["support_type"],
             situation=task.input_data["situation"],
             income=task.input_data["income"],
             living_cost=task.input_data["living_cost"],
-        ),
+        )
     ),
     verbose=True,
     allow_delegation=False,
@@ -171,16 +162,13 @@ story_agent = Agent(
 recommend_agent = Agent(
     role="Recommend Agent",
     goal="Provide a final recommendation on financial assistance, including amount and justification.",
-    backstory="Your task is to review the student's financial situation analysis and make a final recommendation on the amount of financial assistance that should be provided.",
-    prompt_template=PromptTemplate(
-        template="""
-        Based on the following financial situation and story, provide a final recommendation on how much financial assistance 
-        the student should receive.
-        """,
-        input_variables=["story_info"],
-    ),
+    backstory="""
+    ## Final Recommendation
+    Based on the following financial situation and story, provide a final recommendation on how much financial assistance the student should receive.
+    {story_info}
+    """,
     perform_task=lambda task: get_cached_analysis(
-        chat_model, task.agent.prompt_template.format(story_info=task.input_data)
+        task.agent.backstory.format(story_info=task.input_data)
     ),
     verbose=True,
     allow_delegation=False,
