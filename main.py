@@ -20,6 +20,7 @@ if not openai_api_key:
     st.stop()
 
 os.environ["OPENAI_API_KEY"] = openai_api_key
+os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 
 st.title("Financial Hardship Assessment (CrewAI)")
 
@@ -81,32 +82,15 @@ def combine_extracted_sections(text):
     return details
 
 
-# Use caching to avoid redundant processing for similar inputs
-@lru_cache(maxsize=10)
-def get_cached_analysis(prompt):
-    response = openai.Completion.create(
-        model="gpt-4o-mini", prompt=prompt, max_tokens=500, temperature=0.5
-    )
-    return response.choices[0].text.strip()
-
-
 # Define agents with detailed verbose output for advanced insights
 income_agent = Agent(
     role="Income Agent",
     goal="Calculate the total weekly income from the student's financial information.",
     backstory="""
-    ## Income Calculation
-    You are responsible for accurately calculating the total weekly income from the student's financial documents.
-    - Convert any fortnightly income by dividing by 2.
-    - Convert any monthly income by dividing by 4.
-    - Add all the weekly incomes to show the average weekly income.
-
-    **Student's financial information:**
-    {income}
+    You are an expert at accurately calculating the total weekly income from the combine_extracted_sections function details.
+    You convert any fortnightly income by dividing by 2 and monthly income by 4.
+    Finally, you then add all the weekly incomes to show the average weekly income.
     """,
-    perform_task=lambda task: get_cached_analysis(
-        task.agent.backstory.format(income=task.input_data)
-    ),
     verbose=True,
     allow_delegation=False,
 )
@@ -115,46 +99,22 @@ living_cost_agent = Agent(
     role="Living Cost Agent",
     goal="Calculate the total weekly living costs from the student's financial information.",
     backstory="""
-    ## Living Cost Calculation
+    You are an expert at accurately calculating the total weekly Living Cost from the combine_extracted_sections function details.
     Calculate the total weekly living costs for the student.
-    - Convert any fortnightly living costs by dividing by 2.
-    - Convert any monthly living costs by dividing by 4.
-    - Add all the weekly living costs to show the average weekly living costs.
-
-    **Student's financial information:**
-    {living_cost}
+    You convert any fortnightly income by dividing by 2 and monthly living cost by 4.
+    Finally, you then add all the weekly living cost to show the average weekly living cost.
     """,
-    perform_task=lambda task: get_cached_analysis(
-        task.agent.backstory.format(living_cost=task.input_data)
-    ),
     verbose=True,
     allow_delegation=False,
 )
 
 story_agent = Agent(
     role="Story Agent",
-    goal="Analyze the student's financial situation based on their story and financial data.",
+    goal="Analyze the student's financial situation based on their story and financial data received from income and living_cost Agent.",
     backstory="""
-    ## Financial Situation Analysis
-    Analyze the student's financial situation based on their story and financial data. Identify any overall shortfall or surplus (weekly income - weekly living costs).
-    - Highlight factors such as job loss, placements, or other significant financial challenges.
-
-    **Type(s) of Financial Support Requested:** {support_type}
-
-    **Reason for Seeking Financial Support:**
-    {situation}
-
-    **Weekly Income:** {income}
-    **Weekly Living Costs:** {living_cost}
+    You are a senior student advisor who expertize in student financial hardship and emergency requests and applications.
+    You analyze the student's financial situation based on their story from the combine_extracted_sections function details and financial data received from income and living_cost Agent. Your excellency in the role shows when you not only consider the shortfall or surplus of the (weekly income - weekly living costs) but also to highlight the factors that involve with the student's financial challenge such as job loss, placements (intership), family issues or any other significant financial challenges. Your story compilation is exceptional that the summary of the story is concise but does not miss any points of the story.
     """,
-    perform_task=lambda task: get_cached_analysis(
-        task.agent.backstory.format(
-            support_type=task.input_data["support_type"],
-            situation=task.input_data["situation"],
-            income=task.input_data["income"],
-            living_cost=task.input_data["living_cost"],
-        )
-    ),
     verbose=True,
     allow_delegation=False,
 )
@@ -163,40 +123,10 @@ recommend_agent = Agent(
     role="Recommend Agent",
     goal="Provide a final recommendation on financial assistance, including amount and justification.",
     backstory="""
-    ## Final Recommendation
-    Based on the following financial situation and story, provide a final recommendation on how much financial assistance the student should receive.
-    {story_info}
+    You are a senior student advisor who compile all the information from the income agent, living_cost agent and story_agent to provide a final recommendation on how much financial assistance the student should receive based on financial situation and their individual stories that involve with the financial challenges. Your recommendation is so sound that any managers or senior managers would agree with your recommendation. 
     """,
-    perform_task=lambda task: get_cached_analysis(
-        task.agent.backstory.format(story_info=task.input_data)
-    ),
     verbose=True,
     allow_delegation=False,
-)
-
-# Define tasks directly
-financial_assessment_task = Task(
-    description="Assess the financial needs of each student based on their application, documentation, and financial situation.",
-    agent=income_agent,
-    expected_output="A detailed report of the total weekly income.",
-)
-
-living_cost_assessment_task = Task(
-    description="Assess the student's weekly living costs based on their provided financial information.",
-    agent=living_cost_agent,
-    expected_output="A comprehensive breakdown of the student's weekly living costs.",
-)
-
-story_analysis_task = Task(
-    description="Synthesize the financial story with the calculated income and living costs to provide a comprehensive analysis.",
-    agent=story_agent,
-    expected_output="A narrative analysis that includes the summary of the student's financial situation.",
-)
-
-final_decision_task = Task(
-    description="Document the final decision on the financial assistance request, including the rationale.",
-    agent=recommend_agent,
-    expected_output="A final recommendation report containing the proposed amount of financial assistance.",
 )
 
 # Upload PDF file and process
@@ -214,16 +144,46 @@ if pdf_file:
         st.warning("Processing stopped by user.")
         st.stop()
 
-    # Define agents and tasks with the extracted data
-    agents = [income_agent, living_cost_agent, story_agent, recommend_agent]
-    tasks = [
-        financial_assessment_task,
-        living_cost_assessment_task,
-        story_analysis_task,
-        final_decision_task,
-    ]
+    # Define tasks with the extracted data
+    income_task = Task(
+        description="Calculate the total weekly income from the provided financial document.",
+        agent=income_agent,
+        input_data=extracted_sections["Income Details"],
+        expected_output="Total weekly income calculated.",
+    )
+
+    living_cost_task = Task(
+        description="Calculate the total weekly living costs from the provided financial document.",
+        agent=living_cost_agent,
+        input_data=extracted_sections["Living Costs"],
+        expected_output="Total weekly living costs calculated.",
+    )
+
+    story_task = Task(
+        description="Compile a comprehensive story based on income, expenses, and additional financial data.",
+        agent=story_agent,
+        input_data={
+            "income_info": income_task,
+            "living_cost_info": living_cost_task,
+            "support_type": extracted_sections["Types of Financial Support"],
+            "situation": extracted_sections["Reason for Support"],
+        },
+        expected_output="Compiled financial story.",
+    )
+
+    recommend_task = Task(
+        description="Provide a recommendation for financial assistance based on the financial story.",
+        agent=recommend_agent,
+        input_data={
+            "story_info": story_task,
+        },
+        expected_output="Final recommendation for financial assistance.",
+    )
 
     # Create Crew instance and run tasks
+    agents = [income_agent, living_cost_agent, story_agent, recommend_agent]
+    tasks = [income_task, living_cost_task, story_task, recommend_task]
+
     crew = Crew(tasks=tasks, agents=agents, verbose=True)
 
     with st.spinner(
