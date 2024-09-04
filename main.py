@@ -172,12 +172,12 @@ if pdf_file:
     )
 
     recommend_task = Task(
-        description="Provide a recommendation for financial assistance based on the financial story.",
+        description="Provide a recommendation for financial assistance based on the financial story and MUST give an exact dollar value ie $450 financial hardship fund approved with strong rationale.",
         agent=recommend_agent,
         input_data={
             "story_info": story_task,
         },
-        expected_output="Final recommendation for financial assistance.",
+        expected_output="Final recommendation for financial assistance. An exact dollar value ie $400 support is given out. If declined, then MUST state declined with the rationale.",
     )
 
     # Create Crew instance and run tasks
