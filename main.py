@@ -97,12 +97,12 @@ income_agent = Agent(
 
 living_cost_agent = Agent(
     role="Living Cost Agent",
-    goal="Calculate the total weekly living costs from the student's financial information.",
+    goal="Calculate the total weekly living costs (EXPENSES) from the student's financial information.",
     backstory="""
-    You are an expert at accurately calculating the total weekly Living Cost from the combine_extracted_sections function details.
-    Calculate the total weekly living costs for the student.
-    You convert any fortnightly income by dividing by 2 and monthly living cost by 4.
-    Finally, you then add all the weekly living cost to show the average weekly living cost.
+    You are an expert at accurately calculating the total weekly Living Cost (EXPENSES) from the combine_extracted_sections function details.
+    Calculate the total weekly living costs (EXPENSES) for the student.
+    You convert any fortnightly income by dividing by 2 and monthly living cost (EXPENSES) by 4.
+    Finally, you then add all the weekly living cost (EXPENSES) to show the average weekly living cost (EXPENSES).
     """,
     verbose=True,
     allow_delegation=False,
@@ -156,7 +156,7 @@ if pdf_file:
         description="Calculate the total weekly living costs from the provided financial document.",
         agent=living_cost_agent,
         input_data=extracted_sections["Living Costs"],
-        expected_output="Total weekly living costs calculated.",
+        expected_output="Total weekly living costs (EXPENSES) calculated.",
     )
 
     story_task = Task(
