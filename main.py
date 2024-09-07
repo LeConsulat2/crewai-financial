@@ -271,6 +271,169 @@ if pdf_file:
             st.error(f"An error occurred: {e}")
             st.stop()
 
+    # Set up logging to capture agent communications
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger("AgentCommunication")
+
+
+# Function to log agent communication
+def log_agent_communication(agent_name, message):
+    logger.info(f"[{agent_name}]: {message}")
+
+
+# Define agents with hooks for capturing detailed thoughts and communications
+income_agent = Agent(
+    role="Income Agent",
+    goal="Accurately calculate the total weekly income from the student's financial information, focusing on identifying all income streams and converting them into weekly amounts.",
+    backstory="""
+    ### Backstory
+    - **Role**: You are a financial analysis expert specializing in calculating weekly income from various sources. Your calculations are critical in determining the student's current financial standing and assessing their immediate income capabilities.
+    - **Instructions**:
+      1. **Extract Income Information**: Use the input data labeled "Income Details" to gather all available income sources.
+      2. **Identify Income Types**: Identify all forms of income, including weekly, fortnightly, monthly, one-time payments, and other irregular income.
+      3. **Perform Conversions**: Convert income into weekly equivalents: divide fortnightly income by 2, monthly income by 4, and apply relevant conversions for any irregular income sources.
+      4. **Summarize and Validate**: Sum all weekly incomes, validate the accuracy, and provide a clear summary that highlights any unusual income patterns or potential concerns.
+    - **Output**: The output should be the total weekly income, including a detailed breakdown, conversion methods, and any assumptions made.
+    """,
+    verbose=True,
+    allow_delegation=False,
+    on_thought=lambda thought: log_agent_communication("Income Agent", thought),
+    on_action=lambda action, input: log_agent_communication(
+        "Income Agent", f"Action: {action} | Input: {input}"
+    ),
+)
+
+# Repeat for other agents with their respective logging hooks
+living_cost_agent = Agent(
+    role="Living Cost Agent",
+    goal="Precisely calculate the total weekly living costs, focusing on essential expenses that align with AUT financial hardship support criteria.",
+    backstory="""
+    ### Backstory
+    - **Role**: You are an expert in financial budgeting, specifically in calculating essential living expenses that reflect the student's immediate financial commitments. Your analysis helps determine the gap between income and necessary expenditures.
+    - **Instructions**:
+      1. **Extract Living Costs**: Use the input labeled "Living Costs" to identify necessary expenses such as rent, food, utilities, transport, and childcare.
+      2. **Categorize and Prioritize**: Ensure expenses align with eligible categories under AUT’s financial support criteria, prioritizing those that address immediate and essential needs.
+      3. **Perform Conversions**: Convert all non-weekly expenses into weekly amounts: divide fortnightly costs by 2, and monthly costs by 4, ensuring all values are standardized.
+      4. **Summarize and Highlight**: Provide a comprehensive total of weekly living costs, highlighting key categories and noting any significant or urgent costs.
+    - **Output**: The output should be a total weekly expense figure, with detailed explanations of categories and conversions used.
+    """,
+    verbose=True,
+    allow_delegation=False,
+    on_thought=lambda thought: log_agent_communication("Living Cost Agent", thought),
+    on_action=lambda action, input: log_agent_communication(
+        "Living Cost Agent", f"Action: {action} | Input: {input}"
+    ),
+)
+
+# Similarly, define story_agent and recommend_agent with logging hooks
+
+# Upload PDF file and process
+pdf_file = st.file_uploader("Upload PDF", type=["pdf"])
+if pdf_file:
+    extracted_text = extract_pdf_text(pdf_file)
+    extracted_sections = combine_extracted_sections(extracted_text)
+
+    # Display extracted sections
+    for section, content in extracted_sections.items():
+        st.subheader(section)
+        st.write(content)
+
+    if st.button("Stop Processing"):
+        st.warning("Processing stopped by user.")
+        st.stop()
+
+    # Define tasks with advanced sophistication
+    income_task = Task(
+        description="Calculate the total weekly income from the provided financial document.",
+        agent=income_agent,
+        input_data=extracted_sections["Income Details"],
+        expected_output="""
+        ### Expected Output
+        - **Accurate Calculation**: Calculate the student's total weekly income, including a detailed breakdown of all income sources (weekly, fortnightly, monthly, and other).
+        - **Conversion**: Ensure that all income amounts are converted to weekly equivalents for standardized comparison.
+        - **Summary**: Provide a clear summary highlighting key income streams and any potential anomalies or irregularities in the data.
+        """,
+    )
+
+    living_cost_task = Task(
+        description="Calculate the total weekly living costs from the provided financial document, focusing on essential expenses that meet AUT's criteria.",
+        agent=living_cost_agent,
+        input_data=extracted_sections["Living Costs"],
+        expected_output="""
+        ### Expected Output
+        - **Precise Calculation**: Calculate the student's total weekly living costs (EXPENSES), including a detailed breakdown of all essential expenses.
+        - **Conversion**: Convert non-weekly expenses to weekly equivalents to ensure consistent comparison.
+        - **Summary**: Include a summary of the most significant expense categories, and highlight any potential concerns or opportunities for cost reduction.
+        """,
+    )
+
+    story_task = Task(
+        description="Compile a comprehensive story based on income, expenses, and additional financial data, emphasizing the temporary nature of financial needs.",
+        agent=story_agent,
+        input_data={
+            "income_info": income_task,
+            "living_cost_info": living_cost_task,
+            "support_type": extracted_sections["Types of Financial Support"],
+            "situation": extracted_sections["Reason for Support"],
+        },
+        expected_output="""
+        ### Expected Output
+        - **Comprehensive Narrative**: Integrate the student's financial story with detailed income and expense data.
+        - **Context**: Identify key challenges, such as employment status, family obligations, or other relevant factors.
+        - **Financial Summary**: Clearly outline the student’s financial shortfall or surplus, and discuss the impact on their financial stability.
+        - **Insights**: Highlight any critical insights or trends influencing the student's financial health.
+        """,
+    )
+
+    recommend_task = Task(
+        description="Provide a recommendation for financial assistance based on the financial story, income, and expense details. MUST give an exact dollar value (e.g., $450 financial hardship fund approved) with strong rationale.",
+        agent=recommend_agent,
+        input_data={
+            "income_info": income_task,  # Include income details
+            "living_cost_info": living_cost_task,  # Include living costs details
+            "story_info": story_task,  # Include the comprehensive financial story
+        },
+        expected_output="""
+        ### Expected Output
+        - **Well-Reasoned Recommendation**: Synthesize information from income, living costs, and story tasks to provide a recommendation for financial assistance.
+        - **Specific Amount**: Include a specific dollar amount for the recommended assistance, with detailed justification.
+        - **Alignment with Senior Criteria**: Ensure the recommendation aligns with criteria used by senior managers, making it defensible and equitable.
+        - **Impact**: Clearly outline how the recommended financial support will impact the student's situation.
+        - **Alternative Guidance**: If declining support, provide a compassionate rationale and suggest alternative options.
+        """,
+    )
+
+    # Create Crew instance and run tasks
+    agents = [income_agent, living_cost_agent, story_agent, recommend_agent]
+    tasks = [income_task, living_cost_task, story_task, recommend_task]
+
+    crew = Crew(
+        tasks=tasks,
+        agents=agents,
+        verbose=True,
+        # Capture agent thoughts and communications
+        on_thought=lambda agent_name, thought: log_agent_communication(
+            agent_name, thought
+        ),
+        on_message=lambda agent_name, message: log_agent_communication(
+            agent_name, message
+        ),
+    )
+
+    with st.spinner(
+        "Analysis in progress... Outcome and recommendation are being made. Please wait."
+    ):
+        try:
+            result = crew.kickoff()
+
+            # Log task progress
+            for i, task in enumerate(tasks):
+                st.write(f"Completed task {i + 1}/{len(tasks)}: {task.description}")
+
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+            st.stop()
+
     # Display the final result in a nicely formatted Markdown
     st.subheader("CrewAI Assessment Result")
     result_markdown = """
