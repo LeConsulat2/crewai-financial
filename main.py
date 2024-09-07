@@ -159,12 +159,12 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("AgentCommunication")
 
 
-# Function to log agent communication
+# Function to log agent communication in Streamlit
 def log_agent_communication(agent_name, message):
-    logger.info(f"[{agent_name}]: {message}")
+    st.write(f"[{agent_name}]: {message}")  # Displaying directly in the Streamlit app
 
 
-# Define agents with hooks for capturing detailed thoughts and communications
+# Define income_agent with logging hooks
 income_agent = Agent(
     role="Income Agent",
     goal="Accurately calculate the total weekly income from the student's financial information, focusing on identifying all income streams and converting them into weekly amounts.",
@@ -180,13 +180,15 @@ income_agent = Agent(
     """,
     verbose=True,
     allow_delegation=False,
-    on_thought=lambda thought: log_agent_communication("Income Agent", thought),
+    on_thought=lambda thought: log_agent_communication(
+        "Income Agent", f"Thought: {thought}"
+    ),
     on_action=lambda action, input: log_agent_communication(
         "Income Agent", f"Action: {action} | Input: {input}"
     ),
 )
 
-# Repeat for other agents with their respective logging hooks
+# Define living_cost_agent with logging hooks
 living_cost_agent = Agent(
     role="Living Cost Agent",
     goal="Precisely calculate the total weekly living costs, focusing on essential expenses that align with AUT financial hardship support criteria.",
@@ -202,13 +204,62 @@ living_cost_agent = Agent(
     """,
     verbose=True,
     allow_delegation=False,
-    on_thought=lambda thought: log_agent_communication("Living Cost Agent", thought),
+    on_thought=lambda thought: log_agent_communication(
+        "Living Cost Agent", f"Thought: {thought}"
+    ),
     on_action=lambda action, input: log_agent_communication(
         "Living Cost Agent", f"Action: {action} | Input: {input}"
     ),
 )
 
-# Similarly, define story_agent and recommend_agent with logging hooks
+# Define story_agent with logging hooks
+story_agent = Agent(
+    role="Story Agent",
+    goal="Analyze the student's overall financial situation, integrating narrative elements from income and expense data to create a comprehensive and insightful financial story.",
+    backstory="""
+    ### Backstory
+    - **Role**: As a senior student advisor, you excel in understanding and communicating complex financial situations, particularly those involving financial hardship.
+    - **Instructions**:
+      1. **Integrate Data**: Use the provided input data, including income and expense information, as well as personal financial narratives.
+      2. **Analyze Context**: Identify key challenges such as job loss, family obligations, or educational commitments that impact the student's finances.
+      3. **Financial Summary**: Clearly outline the financial shortfall or surplus, providing context and identifying any significant patterns or trends.
+      4. **Highlight Key Factors**: Emphasize the most critical aspects of the student's situation that influence their financial needs.
+    - **Output**: A well-rounded financial story that clearly articulates the student's situation, challenges, and financial needs.
+    """,
+    verbose=True,
+    allow_delegation=False,
+    on_thought=lambda thought: log_agent_communication(
+        "Story Agent", f"Thought: {thought}"
+    ),
+    on_action=lambda action, input: log_agent_communication(
+        "Story Agent", f"Action: {action} | Input: {input}"
+    ),
+)
+
+# Define recommend_agent with logging hooks
+recommend_agent = Agent(
+    role="Recommend Agent",
+    goal="Synthesize all financial data and narratives to provide a robust, actionable recommendation for financial assistance, fully justifiable to senior management.",
+    backstory="""
+    ### Backstory
+    - **Role**: You are a senior advisor with the expertise to make high-stakes financial recommendations that are sound, justifiable, and aligned with organizational standards.
+    - **Instructions**:
+      1. **Gather Information**: Collect insights from the income, living cost, and story agents, ensuring a complete picture of the student's financial situation.
+      2. **Evaluate Financial Need**: Assess the financial need by comparing the student's income against their living costs, factoring in any special circumstances highlighted in the story.
+      3. **Decision Making**: Decide on the level of financial assistance required, ensuring the recommendation addresses the specific challenges faced by the student.
+      4. **Provide Justification**: Include a clear, detailed rationale for the recommended amount, explaining why this level of support is appropriate given the student’s circumstances.
+      5. **Alternative Options**: If recommending against assistance, provide a compassionate rationale and suggest alternative pathways or resources.
+    - **Output**: A final recommendation that includes a specific dollar amount for financial assistance, supported by detailed reasoning and aligned with organizational criteria.
+    """,
+    verbose=True,
+    allow_delegation=False,
+    on_thought=lambda thought: log_agent_communication(
+        "Recommend Agent", f"Thought: {thought}"
+    ),
+    on_action=lambda action, input: log_agent_communication(
+        "Recommend Agent", f"Action: {action} | Input: {input}"
+    ),
+)
 
 # Upload PDF file and process
 pdf_file = st.file_uploader("Upload PDF", type=["pdf"])
@@ -296,10 +347,10 @@ if pdf_file:
         verbose=True,
         # Capture agent thoughts and communications
         on_thought=lambda agent_name, thought: log_agent_communication(
-            agent_name, thought
+            agent_name, f"Thought: {thought}"
         ),
         on_message=lambda agent_name, message: log_agent_communication(
-            agent_name, message
+            agent_name, f"Message: {message}"
         ),
     )
 
