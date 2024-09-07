@@ -5,6 +5,7 @@ import os
 from crewai import Crew, Agent, Task
 from functools import lru_cache
 import openai  # Direct use of OpenAI API
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -84,16 +85,16 @@ def combine_extracted_sections(text):
 
 income_agent = Agent(
     role="Income Agent",
-    goal="Calculate the total weekly income from the student's financial information accurately, ensuring all income streams are identified and appropriately converted to weekly amounts.",
+    goal="Accurately calculate the total weekly income from the student's financial information, focusing on identifying all income streams and converting them into weekly amounts.",
     backstory="""
     ### Backstory
-    - **Role**: You are an expert in financial calculations, specifically focused on determining weekly income from varied income sources.
+    - **Role**: You are a financial analysis expert specializing in calculating weekly income from various sources. Your calculations are critical in determining the student's current financial standing and assessing their immediate income capabilities.
     - **Instructions**:
-      1. **Extract Income Information**: Use the details provided in the input data labeled as "Income Details".
-      2. **Identify Income Types**: Identify all sources of income, including weekly, fortnightly, monthly, and other irregular sources.
-      3. **Conversion**: Convert any fortnightly income by dividing by 2, and monthly income by dividing by 4 to align with weekly calculations.
-      4. **Summarize**: Sum all the weekly incomes to provide a clear, concise total weekly income figure.
-    - **Output**: The final output should be the total weekly income, clearly stating all assumptions and conversion methods used.
+      1. **Extract Income Information**: Use the input data labeled "Income Details" to gather all available income sources.
+      2. **Identify Income Types**: Identify all forms of income, including weekly, fortnightly, monthly, one-time payments, and other irregular income.
+      3. **Perform Conversions**: Convert income into weekly equivalents: divide fortnightly income by 2, monthly income by 4, and apply relevant conversions for any irregular income sources.
+      4. **Summarize and Validate**: Sum all weekly incomes, validate the accuracy, and provide a clear summary that highlights any unusual income patterns or potential concerns.
+    - **Output**: The output should be the total weekly income, including a detailed breakdown, conversion methods, and any assumptions made.
     """,
     verbose=True,
     allow_delegation=False,
@@ -101,16 +102,16 @@ income_agent = Agent(
 
 living_cost_agent = Agent(
     role="Living Cost Agent",
-    goal="Accurately calculate the total weekly living costs (EXPENSES) from the student's financial information, ensuring consistency in expense reporting.",
+    goal="Precisely calculate the total weekly living costs, focusing on essential expenses that align with the AUT financial hardship support criteria.",
     backstory="""
     ### Backstory
-    - **Role**: You are an expert at calculating living expenses, ensuring accurate weekly costs that reflect the student’s financial commitments.
+    - **Role**: You are an expert in financial budgeting, specifically in calculating essential living expenses that reflect the student's immediate financial commitments. Your analysis helps determine the gap between income and necessary expenditures.
     - **Instructions**:
-      1. **Extract Living Costs**: Utilize the input labeled "Living Costs" to identify all necessary expenses.
-      2. **Categorize Expenses**: Identify expense categories, ensuring no essential costs are overlooked.
-      3. **Conversion**: Convert non-weekly expenses (e.g., fortnightly, monthly) to weekly by dividing fortnightly by 2 and monthly by 4.
-      4. **Summarize**: Aggregate all weekly expenses into a total weekly living cost figure, highlighting key cost categories.
-    - **Output**: Provide the total weekly living costs with a detailed breakdown and clear explanations of all conversions.
+      1. **Extract Living Costs**: Use the input labeled "Living Costs" to identify necessary expenses such as rent, food, utilities, transport, and childcare.
+      2. **Categorize and Prioritize**: Ensure expenses align with eligible categories under AUT’s financial support criteria, prioritizing those that address immediate and essential needs.
+      3. **Perform Conversions**: Convert all non-weekly expenses into weekly amounts: divide fortnightly costs by 2, and monthly costs by 4, ensuring all values are standardized.
+      4. **Summarize and Highlight**: Provide a comprehensive total of weekly living costs, highlighting key categories and noting any significant or urgent costs.
+    - **Output**: The output should be a total weekly expense figure, with detailed explanations of categories and conversions used.
     """,
     verbose=True,
     allow_delegation=False,
@@ -118,16 +119,16 @@ living_cost_agent = Agent(
 
 story_agent = Agent(
     role="Story Agent",
-    goal="Analyze the student's overall financial situation, integrating narrative elements from income and expense data to create a comprehensive and insightful financial story.",
+    goal="Create a comprehensive and insightful narrative that integrates the student's financial data, focusing on the temporary nature of their needs and the specific challenges they face.",
     backstory="""
     ### Backstory
-    - **Role**: As a senior student advisor, you excel in understanding and communicating complex financial situations, particularly those involving financial hardship.
+    - **Role**: As a senior advisor, you excel at synthesizing financial and contextual information to provide a complete understanding of the student's situation. Your narrative will guide decision-making by highlighting the student's immediate challenges and the impact of their financial shortfall.
     - **Instructions**:
-      1. **Integrate Data**: Use the provided input data, including income and expense information, as well as personal financial narratives.
-      2. **Analyze Context**: Identify key challenges such as job loss, family obligations, or educational commitments that impact the student's finances.
-      3. **Financial Summary**: Clearly outline the financial shortfall or surplus, providing context and identifying any significant patterns or trends.
-      4. **Highlight Key Factors**: Emphasize the most critical aspects of the student's situation that influence their financial needs.
-    - **Output**: A well-rounded financial story that clearly articulates the student's situation, challenges, and financial needs.
+      1. **Integrate Income and Expense Data**: Utilize the inputs from income and living cost agents to provide a balanced view of the student's financial status.
+      2. **Contextualize Challenges**: Identify specific challenges impacting the student's finances, such as waiting for allowance payments, placement periods, or sudden emergencies.
+      3. **Highlight Critical Factors**: Emphasize the temporary nature of the financial need and the impact on the student's ability to continue their studies without additional support.
+      4. **Provide a Clear Summary**: Offer a concise yet detailed summary of the financial shortfall or surplus, key challenges, and any notable trends or patterns.
+    - **Output**: The output should be a well-rounded financial story that captures the student's immediate needs and provides context for the recommendation.
     """,
     verbose=True,
     allow_delegation=False,
@@ -135,21 +136,33 @@ story_agent = Agent(
 
 recommend_agent = Agent(
     role="Recommend Agent",
-    goal="Synthesize all financial data and narratives to provide a robust, actionable recommendation for financial assistance, fully justifiable to senior management.",
+    goal="Provide a precise and justified recommendation for financial assistance, using all available data to ensure the recommendation is robust, aligned with AUT criteria, and addresses the student's immediate needs.",
     backstory="""
     ### Backstory
-    - **Role**: You are a senior advisor with the expertise to make high-stakes financial recommendations that are sound, justifiable, and aligned with organizational standards.
+    - **Role**: As a senior financial advisor, you are responsible for making sound, justifiable recommendations on financial assistance. Your decisions must be based on thorough analysis, align with AUT’s support criteria, and address the student's specific and immediate needs.
     - **Instructions**:
-      1. **Gather Information**: Collect insights from the income, living cost, and story agents, ensuring a complete picture of the student's financial situation.
-      2. **Evaluate Financial Need**: Assess the financial need by comparing the student's income against their living costs, factoring in any special circumstances highlighted in the story.
-      3. **Decision Making**: Decide on the level of financial assistance required, ensuring the recommendation addresses the specific challenges faced by the student.
-      4. **Provide Justification**: Include a clear, detailed rationale for the recommended amount, explaining why this level of support is appropriate given the student’s circumstances.
-      5. **Alternative Options**: If recommending against assistance, provide a compassionate rationale and suggest alternative pathways or resources.
-    - **Output**: A final recommendation that includes a specific dollar amount for financial assistance, supported by detailed reasoning and aligned with organizational criteria.
+      1. **Synthesize Data**: Combine insights from the income, living costs, and story agents to form a complete picture of the student's financial situation.
+      2. **Assess Financial Need**: Evaluate the gap between income and essential expenses, factoring in any urgent or temporary needs that support would address.
+      3. **Make a Decision**: Determine the exact amount of financial assistance required, ensuring it covers the specific period of need (e.g., 3-4 weeks).
+      4. **Provide Detailed Justification**: Offer a robust rationale for the recommended amount, linking it directly to the student's circumstances and ensuring alignment with AUT’s criteria for temporary, one-off support.
+      5. **Suggest Alternatives if Necessary**: If declining support, provide a clear rationale and suggest alternative options or next steps for the student.
+    - **Output**: The output should be a final recommendation with a specific dollar amount, fully justified and aligned with the temporary nature of the support required.
     """,
     verbose=True,
     allow_delegation=False,
 )
+
+# After defining all the agents
+
+# Set up logging to capture agent communications
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger("AgentCommunication")
+
+
+# Function to log agent communication
+def log_agent_communication(agent_name, message):
+    logger.info(f"[{agent_name}]: {message}")
+
 
 # Upload PDF file and process
 pdf_file = st.file_uploader("Upload PDF", type=["pdf"])
@@ -166,20 +179,21 @@ if pdf_file:
         st.warning("Processing stopped by user.")
         st.stop()
 
+    # Define tasks with advanced sophistication
     income_task = Task(
         description="Calculate the total weekly income from the provided financial document.",
         agent=income_agent,
         input_data=extracted_sections["Income Details"],
         expected_output="""
-    ### Expected Output
-    - **Accurate Calculation**: Calculate the student's total weekly income, including a detailed breakdown of all income sources (weekly, fortnightly, monthly, and other).
-    - **Conversion**: Ensure that all income amounts are converted to weekly equivalents for standardized comparison.
-    - **Summary**: Provide a clear summary highlighting key income streams and any potential anomalies or irregularities in the data.
-    """,
+        ### Expected Output
+        - **Accurate Calculation**: Calculate the student's total weekly income, including a detailed breakdown of all income sources (weekly, fortnightly, monthly, and other).
+        - **Conversion**: Ensure that all income amounts are converted to weekly equivalents for standardized comparison.
+        - **Summary**: Provide a clear summary highlighting key income streams and any potential anomalies or irregularities in the data.
+        """,
     )
 
     living_cost_task = Task(
-        description="Calculate the total weekly living costs from the provided financial document.",
+        description="Calculate the total weekly living costs from the provided financial document, focusing on essential expenses that meet AUT's criteria.",
         agent=living_cost_agent,
         input_data=extracted_sections["Living Costs"],
         expected_output="""
@@ -191,7 +205,7 @@ if pdf_file:
     )
 
     story_task = Task(
-        description="Compile a comprehensive story based on income, expenses, and additional financial data.",
+        description="Compile a comprehensive story based on income, expenses, and additional financial data, emphasizing the temporary nature of financial needs.",
         agent=story_agent,
         input_data={
             "income_info": income_task,
@@ -209,10 +223,12 @@ if pdf_file:
     )
 
     recommend_task = Task(
-        description="Provide a recommendation for financial assistance based on the financial story and MUST give an exact dollar value ie $450 financial hardship fund approved with strong rationale.",
+        description="Provide a recommendation for financial assistance based on the financial story, income, and expense details. MUST give an exact dollar value (e.g., $450 financial hardship fund approved) with strong rationale.",
         agent=recommend_agent,
         input_data={
-            "story_info": story_task,
+            "income_info": income_task,  # Include income details
+            "living_cost_info": living_cost_task,  # Include living costs details
+            "story_info": story_task,  # Include the comprehensive financial story
         },
         expected_output="""
         ### Expected Output
@@ -228,7 +244,18 @@ if pdf_file:
     agents = [income_agent, living_cost_agent, story_agent, recommend_agent]
     tasks = [income_task, living_cost_task, story_task, recommend_task]
 
-    crew = Crew(tasks=tasks, agents=agents, verbose=True)
+    crew = Crew(
+        tasks=tasks,
+        agents=agents,
+        verbose=True,
+        # Capture agent thoughts and communications
+        on_thought=lambda agent_name, thought: log_agent_communication(
+            agent_name, thought
+        ),
+        on_message=lambda agent_name, message: log_agent_communication(
+            agent_name, message
+        ),
+    )
 
     with st.spinner(
         "Analysis in progress... Outcome and recommendation are being made. Please wait."
