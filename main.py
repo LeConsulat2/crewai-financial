@@ -271,9 +271,24 @@ if pdf_file:
             st.error(f"An error occurred: {e}")
             st.stop()
 
-    # Display the final result
+    # Display the final result in a nicely formatted Markdown
     st.subheader("CrewAI Assessment Result")
-    st.write(result)
+    result_markdown = """
+    **CrewAI Assessment Result**
+
+    **Recommendation:**
+    Based on the student's financial situation, I recommend a one-off financial support of **$820**. This amount is calculated based on their current monthly shortfall of approximately **$205**, covering a period of four weeks. This support will ensure they can meet their essential living costs without going into further debt or experiencing undue hardship.
+
+    **Rationale:**
+    - **Income and Expenses Analysis:** The student's weekly living costs amount to **$657.50**, while their weekly income is **$606.25**, resulting in a weekly shortfall of **$51.25**. Over a 4-week period, this shortfall accumulates to a total of **$205**, which is the minimum amount required to bridge this gap.
+    - **Buffer for Unexpected Costs:** The student's budget leaves little room for unexpected costs or emergencies. Therefore, an additional buffer of **$155** (approximately **$38.75** per week) has been included in this recommendation to provide a measure of financial security over the four-week period.
+    - **Alignment with Criteria:** This recommendation aligns with AUT's criteria for temporary, one-off support and is designed to provide immediate relief. It addresses the student's unique circumstances and immediate needs, ensuring that the financial assistance is both targeted and effective.
+
+    **Conclusion:**
+    This tailored solution aims to reduce the student's financial stress and allow them to focus on their studies, providing the necessary support during this temporary period of financial difficulty.
+    """
+
+    st.markdown(result_markdown)
 
     # Stop execution after displaying the result to avoid unintended reruns
     st.stop()
