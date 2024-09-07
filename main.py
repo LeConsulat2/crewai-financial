@@ -82,14 +82,18 @@ def combine_extracted_sections(text):
     return details
 
 
-# Define agents with detailed verbose output for advanced insights
 income_agent = Agent(
     role="Income Agent",
-    goal="Calculate the total weekly income from the student's financial information.",
+    goal="Calculate the total weekly income from the student's financial information accurately, ensuring all income streams are identified and appropriately converted to weekly amounts.",
     backstory="""
-    You are an expert at accurately calculating the total weekly income from the combine_extracted_sections function details.
-    You convert any fortnightly income by dividing by 2 and monthly income by 4.
-    Finally, you then add all the weekly incomes to show the average weekly income.
+    ### Backstory
+    - **Role**: You are an expert in financial calculations, specifically focused on determining weekly income from varied income sources.
+    - **Instructions**:
+      1. **Extract Income Information**: Use the details provided in the input data labeled as "Income Details".
+      2. **Identify Income Types**: Identify all sources of income, including weekly, fortnightly, monthly, and other irregular sources.
+      3. **Conversion**: Convert any fortnightly income by dividing by 2, and monthly income by dividing by 4 to align with weekly calculations.
+      4. **Summarize**: Sum all the weekly incomes to provide a clear, concise total weekly income figure.
+    - **Output**: The final output should be the total weekly income, clearly stating all assumptions and conversion methods used.
     """,
     verbose=True,
     allow_delegation=False,
@@ -97,12 +101,16 @@ income_agent = Agent(
 
 living_cost_agent = Agent(
     role="Living Cost Agent",
-    goal="Calculate the total weekly living costs (EXPENSES) from the student's financial information.",
+    goal="Accurately calculate the total weekly living costs (EXPENSES) from the student's financial information, ensuring consistency in expense reporting.",
     backstory="""
-    You are an expert at accurately calculating the total weekly Living Cost (EXPENSES) from the combine_extracted_sections function details.
-    Calculate the total weekly living costs (EXPENSES) for the student.
-    You convert any fortnightly income by dividing by 2 and monthly living cost (EXPENSES) by 4.
-    Finally, you then add all the weekly living cost (EXPENSES) to show the average weekly living cost (EXPENSES).
+    ### Backstory
+    - **Role**: You are an expert at calculating living expenses, ensuring accurate weekly costs that reflect the student’s financial commitments.
+    - **Instructions**:
+      1. **Extract Living Costs**: Utilize the input labeled "Living Costs" to identify all necessary expenses.
+      2. **Categorize Expenses**: Identify expense categories, ensuring no essential costs are overlooked.
+      3. **Conversion**: Convert non-weekly expenses (e.g., fortnightly, monthly) to weekly by dividing fortnightly by 2 and monthly by 4.
+      4. **Summarize**: Aggregate all weekly expenses into a total weekly living cost figure, highlighting key cost categories.
+    - **Output**: Provide the total weekly living costs with a detailed breakdown and clear explanations of all conversions.
     """,
     verbose=True,
     allow_delegation=False,
@@ -110,10 +118,16 @@ living_cost_agent = Agent(
 
 story_agent = Agent(
     role="Story Agent",
-    goal="Analyze the student's financial situation based on their story and financial data received from income and living_cost Agent.",
+    goal="Analyze the student's overall financial situation, integrating narrative elements from income and expense data to create a comprehensive and insightful financial story.",
     backstory="""
-    You are a senior student advisor who expertize in student financial hardship and emergency requests and applications.
-    You analyze the student's financial situation based on their story from the combine_extracted_sections function details and financial data received from income and living_cost Agent. Your excellency in the role shows when you not only consider the shortfall or surplus of the (weekly income - weekly living costs) but also to highlight the factors that involve with the student's financial challenge such as job loss, placements (intership), family issues or any other significant financial challenges. Your story compilation is exceptional that the summary of the story is concise but does not miss any points of the story.
+    ### Backstory
+    - **Role**: As a senior student advisor, you excel in understanding and communicating complex financial situations, particularly those involving financial hardship.
+    - **Instructions**:
+      1. **Integrate Data**: Use the provided input data, including income and expense information, as well as personal financial narratives.
+      2. **Analyze Context**: Identify key challenges such as job loss, family obligations, or educational commitments that impact the student's finances.
+      3. **Financial Summary**: Clearly outline the financial shortfall or surplus, providing context and identifying any significant patterns or trends.
+      4. **Highlight Key Factors**: Emphasize the most critical aspects of the student's situation that influence their financial needs.
+    - **Output**: A well-rounded financial story that clearly articulates the student's situation, challenges, and financial needs.
     """,
     verbose=True,
     allow_delegation=False,
@@ -121,9 +135,17 @@ story_agent = Agent(
 
 recommend_agent = Agent(
     role="Recommend Agent",
-    goal="Provide a final recommendation on financial assistance, including amount and justification.",
+    goal="Synthesize all financial data and narratives to provide a robust, actionable recommendation for financial assistance, fully justifiable to senior management.",
     backstory="""
-    You are a senior student advisor who compile all the information from the income agent, living_cost agent and story_agent to provide a final recommendation on how much financial assistance the student should receive based on financial situation and their individual stories that involve with the financial challenges. Your recommendation is so sound that any managers or senior managers would agree with your recommendation. 
+    ### Backstory
+    - **Role**: You are a senior advisor with the expertise to make high-stakes financial recommendations that are sound, justifiable, and aligned with organizational standards.
+    - **Instructions**:
+      1. **Gather Information**: Collect insights from the income, living cost, and story agents, ensuring a complete picture of the student's financial situation.
+      2. **Evaluate Financial Need**: Assess the financial need by comparing the student's income against their living costs, factoring in any special circumstances highlighted in the story.
+      3. **Decision Making**: Decide on the level of financial assistance required, ensuring the recommendation addresses the specific challenges faced by the student.
+      4. **Provide Justification**: Include a clear, detailed rationale for the recommended amount, explaining why this level of support is appropriate given the student’s circumstances.
+      5. **Alternative Options**: If recommending against assistance, provide a compassionate rationale and suggest alternative pathways or resources.
+    - **Output**: A final recommendation that includes a specific dollar amount for financial assistance, supported by detailed reasoning and aligned with organizational criteria.
     """,
     verbose=True,
     allow_delegation=False,
@@ -144,19 +166,28 @@ if pdf_file:
         st.warning("Processing stopped by user.")
         st.stop()
 
-    # Define tasks with the extracted data
     income_task = Task(
         description="Calculate the total weekly income from the provided financial document.",
         agent=income_agent,
         input_data=extracted_sections["Income Details"],
-        expected_output="Total weekly income calculated.",
+        expected_output="""
+    ### Expected Output
+    - **Accurate Calculation**: Calculate the student's total weekly income, including a detailed breakdown of all income sources (weekly, fortnightly, monthly, and other).
+    - **Conversion**: Ensure that all income amounts are converted to weekly equivalents for standardized comparison.
+    - **Summary**: Provide a clear summary highlighting key income streams and any potential anomalies or irregularities in the data.
+    """,
     )
 
     living_cost_task = Task(
         description="Calculate the total weekly living costs from the provided financial document.",
         agent=living_cost_agent,
         input_data=extracted_sections["Living Costs"],
-        expected_output="Total weekly living costs (EXPENSES) calculated.",
+        expected_output="""
+        ### Expected Output
+        - **Precise Calculation**: Calculate the student's total weekly living costs (EXPENSES), including a detailed breakdown of all essential expenses.
+        - **Conversion**: Convert non-weekly expenses to weekly equivalents to ensure consistent comparison.
+        - **Summary**: Include a summary of the most significant expense categories, and highlight any potential concerns or opportunities for cost reduction.
+        """,
     )
 
     story_task = Task(
@@ -168,7 +199,13 @@ if pdf_file:
             "support_type": extracted_sections["Types of Financial Support"],
             "situation": extracted_sections["Reason for Support"],
         },
-        expected_output="Compiled financial story.",
+        expected_output="""
+        ### Expected Output
+        - **Comprehensive Narrative**: Integrate the student's financial story with detailed income and expense data.
+        - **Context**: Identify key challenges, such as employment status, family obligations, or other relevant factors.
+        - **Financial Summary**: Clearly outline the student’s financial shortfall or surplus, and discuss the impact on their financial stability.
+        - **Insights**: Highlight any critical insights or trends influencing the student's financial health.
+        """,
     )
 
     recommend_task = Task(
@@ -177,7 +214,14 @@ if pdf_file:
         input_data={
             "story_info": story_task,
         },
-        expected_output="Final recommendation for financial assistance. An exact dollar value ie $400 support is given out. If declined, then MUST state declined with the rationale.",
+        expected_output="""
+        ### Expected Output
+        - **Well-Reasoned Recommendation**: Synthesize information from income, living costs, and story tasks to provide a recommendation for financial assistance.
+        - **Specific Amount**: Include a specific dollar amount for the recommended assistance, with detailed justification.
+        - **Alignment with Senior Criteria**: Ensure the recommendation aligns with criteria used by senior managers, making it defensible and equitable.
+        - **Impact**: Clearly outline how the recommended financial support will impact the student's situation.
+        - **Alternative Guidance**: If declining support, provide a compassionate rationale and suggest alternative options.
+        """,
     )
 
     # Create Crew instance and run tasks
