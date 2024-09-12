@@ -216,11 +216,12 @@ if uploaded_file:
 
     extracted_sections = extract_section(extracted_text)
 
-    # Display extracted sections
+    # Display extracted sections for review
     for section, content in extracted_sections.items():
         st.subheader(section)
         st.write(content)
 
+    # Provide control buttons for the user to proceed or stop
     if st.button("Process"):
         pass_info_to_agents(extracted_sections)
 

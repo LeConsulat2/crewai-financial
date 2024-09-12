@@ -1,31 +1,30 @@
 import streamlit as st
 
-
-# Set the page configuration
-st.set_page_config(page_title="AUT GPT Home", page_icon="💬")
-
-
 st.title("CrewAI!")
 
-# Display markdown content
+# Display welcome message
 st.markdown(
     """
-    # Kia Ora!    
+    # Kia Ora!
     Welcome to CrewAI Page!
 
-    👈Here are the apps you can access from the Side bar👈:
+    👉 Here are the apps you can access from the Side bar👇:
     """
 )
 
-# Display the links to the GPT apps only if the user is authenticated
-
+# Navigation options
 st.markdown(
     """
-    - Online Form Crew
-                    
-    - Securedocs Crew
-
-    
-
+    - [Online Form Crew](pages/online-form-crew.py)
+    - [Securedocs Crew](pages/securedoc-crew.py)
     """
 )
+
+# Optionally, add buttons for navigation
+if st.button("Go to Online Form Crew"):
+    st.experimental_set_query_params(page="Online Form Crew")
+    st.markdown("[Click here to go to Online Form Crew](pages/online-form-crew.py)")
+
+if st.button("Go to Securedocs Crew"):
+    st.experimental_set_query_params(page="Securedocs Crew")
+    st.markdown("[Click here to go to Securedocs Crew](pages/securedoc-crew.py)")
