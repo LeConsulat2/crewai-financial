@@ -214,7 +214,7 @@ if uploaded_file:
         st.error("Unsupported file type.")
         st.stop()
 
-    extracted_sections = extract_key_sections(extracted_text)
+    extracted_sections = extract_section(extracted_text)
 
     # Display extracted sections
     for section, content in extracted_sections.items():
