@@ -4,9 +4,6 @@ from dotenv import load_dotenv
 import os
 from crewai import Crew, Agent, Task
 from docx import Document  # For reading Word documents
-from functools import lru_cache
-import openai
-import logging
 
 # Load environment variables
 load_dotenv()

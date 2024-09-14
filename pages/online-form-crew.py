@@ -2,10 +2,9 @@ import streamlit as st
 import pdfplumber
 from dotenv import load_dotenv
 import os
-from crewai import Crew, Agent, Task
-from functools import lru_cache
-import openai  # Direct use of OpenAI API
 import logging
+from crewai import Crew, Agent, Task
+
 
 # Load environment variables
 load_dotenv()
