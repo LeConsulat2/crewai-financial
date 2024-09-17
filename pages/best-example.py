@@ -206,3 +206,7 @@ if pdf_file:
 
     # Stop execution after displaying the result to avoid unintended reruns
     st.stop()
+
+    if st.button("Stop Processing"):
+        st.warning("Processing stopped by user.")
+        st.stop()

@@ -180,3 +180,7 @@ if uploaded_file:
         file_name="financial_assistance_report.txt",
         mime="text/plain",
     )
+
+    if st.button("Stop Processing"):
+        st.warning("Processing stopped by user.")
+        st.stop()

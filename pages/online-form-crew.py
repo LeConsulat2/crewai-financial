@@ -388,3 +388,11 @@ if pdf_file:
 
     # Stop execution after displaying the result to avoid unintended reruns
     st.stop()
+
+    # Provide control buttons for the user to proceed or stop
+    if st.button("Process"):
+        pass_info_to_agents(extracted_sections)
+
+    if st.button("Stop Processing"):
+        st.warning("Processing stopped by user.")
+        st.stop()

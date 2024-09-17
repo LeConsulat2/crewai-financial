@@ -218,3 +218,8 @@ Recommendation:
         file_name="financial_assistance_report.txt",
         mime="text/plain",
     )
+
+    # Provide control buttons for the user to proceed or stop
+    if st.button("Stop Processing"):
+        st.warning("Processing stopped by user.")
+        st.stop()
