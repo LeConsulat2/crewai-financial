@@ -11,9 +11,8 @@ from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 load_dotenv()
 
 # Configure API key
-openai_api_key = os.getenv("OPENAI_API_KEY") or st.secrets["credentials"].get(
-    "OPENAI_API_KEY"
-)
+openai_api_key = os.getenv("OPENAI_API_KEY") or st.secrets["openai"]["api_key"]
+
 if not openai_api_key:
     st.error(
         "OpenAI API key is missing. Please set the OPENAI_API_KEY environment variable or add it to the Streamlit secrets."
@@ -21,7 +20,7 @@ if not openai_api_key:
     st.stop()
 
 os.environ["OPENAI_API_KEY"] = openai_api_key
-os.environ["OPENAI_MODEL_NAME"] = "gpt-4-turbo-preview"
+os.environ["OPENAI_MODEL_NAME"] = "gpt-4o-mini"
 
 st.title("Advanced Financial Assistance Assessment (CrewAI)")
 
