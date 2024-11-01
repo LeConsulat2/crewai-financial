@@ -1,5 +1,5 @@
 # Ignore the virtual environment directory
-/env
+/venv
 
 .streamlit/*
 !.streamlit/config.toml
